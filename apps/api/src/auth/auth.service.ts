@@ -171,15 +171,26 @@ export async function verifyPasswordHash(password: string, storedHash: string): 
 }
 
 async function loadArgon2Verifier(): Promise<((password: string, hash: string) => Promise<boolean>) | null> {
-  try {
-    const nodeRsArgon2 = await import('@node-rs/argon2');
+  const nodeRsArgon2 = await importOptionalModule<{ verify: (hash: string, password: string) => Promise<boolean> }>('@node-rs/argon2');
+
+  if (nodeRsArgon2?.verify) {
     return (password: string, hash: string) => nodeRsArgon2.verify(hash, password);
+  }
+
+  const argon2 = await importOptionalModule<{ verify: (hash: string, password: string) => Promise<boolean> }>('argon2');
+
+  if (argon2?.verify) {
+    return (password: string, hash: string) => argon2.verify(hash, password);
+  }
+
+  return null;
+}
+
+async function importOptionalModule<TModule>(specifier: string): Promise<TModule | null> {
+  try {
+    const dynamicImport = new Function('modulePath', 'return import(modulePath);') as (modulePath: string) => Promise<TModule>;
+    return await dynamicImport(specifier);
   } catch {
-    try {
-      const argon2 = await import('argon2');
-      return (password: string, hash: string) => argon2.verify(hash, password);
-    } catch {
-      return null;
-    }
+    return null;
   }
 }

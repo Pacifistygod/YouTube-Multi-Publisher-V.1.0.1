@@ -41,6 +41,10 @@ describe('protected workspace shell', () => {
 
     const result = await buildWorkspaceLayout({ fetcher });
 
+    if (!result.tabs || !result.emptyStates) {
+      throw new Error('Expected the authenticated workspace shell to render tabs and empty states.');
+    }
+
     expect(result.redirectTo).toBeUndefined();
     expect(result.tabs).toEqual([
       { id: 'accounts', label: 'Accounts', selected: true },

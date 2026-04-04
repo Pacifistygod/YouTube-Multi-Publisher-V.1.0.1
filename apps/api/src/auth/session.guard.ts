@@ -1,6 +1,6 @@
 export interface AdminSessionUser {
   email: string;
-  authenticatedAt: string;
+  authenticatedAt?: string;
 }
 
 export interface AdminSession {

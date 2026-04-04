@@ -65,7 +65,7 @@ describe('seeded admin session authentication boundary', () => {
         maxAge: 43_200_000,
       }),
     );
-    expect(response.body.user.email).toBe('admin@example.com');
+    expect(response.body.user?.email).toBe('admin@example.com');
   });
 
   test('returns 401 and no session cookie for invalid credentials', async () => {
