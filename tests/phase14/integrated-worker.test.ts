@@ -30,12 +30,12 @@ function buildTestDeps() {
 }
 
 function createCampaignWithTarget(campaignService: CampaignService) {
-  const campaign = campaignService.createCampaign({
+  const { campaign } = campaignService.createCampaign({
     title: 'Test Campaign',
     videoAssetId: 'asset-001',
   });
 
-  const target = campaignService.addTarget(campaign.id, {
+  const { target } = campaignService.addTarget(campaign.id, {
     channelId: 'channel-001',
     videoTitle: 'My Video',
     videoDescription: 'Description here',
@@ -43,7 +43,9 @@ function createCampaignWithTarget(campaignService: CampaignService) {
     privacy: 'public',
   });
 
-  return { campaign, target };
+  campaignService.markReady(campaign.id);
+
+  return { campaign: campaignService.getCampaign(campaign.id)!.campaign, target };
 }
 
 describe('Integrated worker — createIntegratedWorker', () => {
@@ -94,9 +96,19 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
   test('runner.processAll drains queue using integrated upload service', async () => {
     const deps = buildTestDeps();
-    const { campaign } = createCampaignWithTarget(deps.campaignService);
+    const { campaign } = deps.campaignService.createCampaign({
+      title: 'Multi Target Campaign',
+      videoAssetId: 'asset-001',
+    });
 
-    // Add a second target
+    deps.campaignService.addTarget(campaign.id, {
+      channelId: 'channel-001',
+      videoTitle: 'First Video',
+      videoDescription: 'First description',
+      tags: ['tag1'],
+      privacy: 'public',
+    });
+
     deps.campaignService.addTarget(campaign.id, {
       channelId: 'channel-002',
       videoTitle: 'Second Video',
@@ -105,6 +117,7 @@ describe('Integrated worker — createIntegratedWorker', () => {
       privacy: 'unlisted',
     });
 
+    deps.campaignService.markReady(campaign.id);
     deps.launchService.launchCampaign(campaign.id);
 
     const instance = createIntegratedWorker({
