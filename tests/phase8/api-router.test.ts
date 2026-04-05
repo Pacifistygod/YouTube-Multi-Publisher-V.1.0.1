@@ -152,8 +152,8 @@ describe('API router dispatches campaign routes', () => {
     mod.launchService.launchCampaign(campaign.id);
     // Fail the job
     const jobs = mod.jobService.getJobsForTarget(target.id);
-    mod.jobService.pick(jobs[0].id);
-    mod.jobService.fail(jobs[0].id, 'quotaExceeded');
+    mod.jobService.pickNext(); // transitions to processing
+    mod.jobService.markFailed(jobs[0].id, 'quotaExceeded');
 
     const router = createApiRouter({ campaignsModule: mod });
     const res = await router.handle(authenticatedRequest({
