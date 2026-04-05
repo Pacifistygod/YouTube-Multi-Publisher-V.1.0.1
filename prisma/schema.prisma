@@ -47,6 +47,8 @@ model YouTubeChannel {
   isActive           Boolean  @default(true) @map("is_active")
   lastSyncedAt       DateTime @default(now()) @map("last_synced_at")
 
+  campaignTargets    CampaignTarget[]
+
   @@unique([connectedAccountId, youtubeChannelId])
   @@index([connectedAccountId])
   @@map("youtube_channels")
@@ -71,6 +73,89 @@ model MediaAsset {
   createdAt         DateTime       @default(now()) @map("created_at")
   updatedAt         DateTime       @updatedAt @map("updated_at")
 
+  campaigns         Campaign[]
+  campaignTargets   CampaignTarget[]
+
   @@index([linkedVideoAssetId])
   @@map("media_assets")
+}
+
+enum CampaignStatus {
+  draft
+  ready
+  launching
+  completed
+  failed
+}
+
+model Campaign {
+  id               String         @id @default(cuid())
+  title            String
+  videoAssetId     String         @map("video_asset_id")
+  videoAsset       MediaAsset     @relation(fields: [videoAssetId], references: [id])
+  status           CampaignStatus @default(draft)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  targets          CampaignTarget[]
+
+  @@index([videoAssetId])
+  @@map("campaigns")
+}
+
+enum TargetStatus {
+  aguardando
+  enviando
+  publicado
+  erro
+}
+
+model CampaignTarget {
+  id                   String       @id @default(cuid())
+  campaignId           String       @map("campaign_id")
+  campaign             Campaign     @relation(fields: [campaignId], references: [id])
+  channelId            String       @map("channel_id")
+  channel              YouTubeChannel @relation(fields: [channelId], references: [id])
+  videoTitle           String       @map("video_title")
+  videoDescription     String       @map("video_description")
+  tags                 String[]     @default([])
+  privacy              String       @default("private")
+  thumbnailAssetId     String?      @map("thumbnail_asset_id")
+  thumbnailAsset       MediaAsset?  @relation(fields: [thumbnailAssetId], references: [id])
+  status               TargetStatus @default(aguardando)
+  youtubeVideoId       String?      @map("youtube_video_id")
+  errorMessage         String?      @map("error_message")
+  retryCount           Int          @default(0) @map("retry_count")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+
+  publishJobs          PublishJob[]
+
+  @@index([campaignId])
+  @@index([channelId])
+  @@map("campaign_targets")
+}
+
+enum PublishJobStatus {
+  queued
+  processing
+  completed
+  failed
+}
+
+model PublishJob {
+  id                 String           @id @default(cuid())
+  campaignTargetId   String           @map("campaign_target_id")
+  campaignTarget     CampaignTarget   @relation(fields: [campaignTargetId], references: [id])
+  status             PublishJobStatus @default(queued)
+  attempt            Int              @default(1)
+  progressPercent    Int              @default(0) @map("progress_percent")
+  youtubeVideoId     String?          @map("youtube_video_id")
+  errorMessage       String?          @map("error_message")
+  startedAt          DateTime?        @map("started_at")
+  completedAt        DateTime?        @map("completed_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  @@index([campaignTargetId])
+  @@map("publish_jobs")
 }
