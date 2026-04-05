@@ -1,0 +1,231 @@
+import { randomUUID } from 'node:crypto';
+
+export interface CampaignTargetRecord {
+  id: string;
+  campaignId: string;
+  channelId: string;
+  videoTitle: string;
+  videoDescription: string;
+  tags: string[];
+  privacy: string;
+  thumbnailAssetId: string | null;
+  status: 'aguardando' | 'enviando' | 'publicado' | 'erro';
+  youtubeVideoId: string | null;
+  errorMessage: string | null;
+  retryCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignRecord {
+  id: string;
+  title: string;
+  videoAssetId: string;
+  status: 'draft' | 'ready' | 'launching' | 'completed' | 'failed';
+  targets: CampaignTargetRecord[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCampaignInput {
+  title: string;
+  videoAssetId: string;
+}
+
+export interface AddTargetInput {
+  channelId: string;
+  videoTitle: string;
+  videoDescription: string;
+  tags?: string[];
+  privacy?: string;
+  thumbnailAssetId?: string;
+}
+
+export interface CampaignRepository {
+  create(record: CampaignRecord): CampaignRecord;
+  findById(id: string): CampaignRecord | null;
+  findAllNewestFirst(): CampaignRecord[];
+  update(id: string, updates: Partial<CampaignRecord>): CampaignRecord | null;
+  addTarget(campaignId: string, target: CampaignTargetRecord): CampaignTargetRecord | null;
+  removeTarget(campaignId: string, targetId: string): boolean;
+  updateTarget(campaignId: string, targetId: string, updates: Partial<CampaignTargetRecord>): CampaignTargetRecord | null;
+}
+
+export class InMemoryCampaignRepository implements CampaignRepository {
+  private readonly campaigns: CampaignRecord[] = [];
+
+  create(record: CampaignRecord): CampaignRecord {
+    this.campaigns.push(record);
+    return record;
+  }
+
+  findById(id: string): CampaignRecord | null {
+    return this.campaigns.find((c) => c.id === id) ?? null;
+  }
+
+  findAllNewestFirst(): CampaignRecord[] {
+    return [...this.campaigns].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  }
+
+  update(id: string, updates: Partial<CampaignRecord>): CampaignRecord | null {
+    const campaign = this.findById(id);
+    if (!campaign) return null;
+    Object.assign(campaign, updates);
+    return campaign;
+  }
+
+  addTarget(campaignId: string, target: CampaignTargetRecord): CampaignTargetRecord | null {
+    const campaign = this.findById(campaignId);
+    if (!campaign) return null;
+    campaign.targets.push(target);
+    return target;
+  }
+
+  removeTarget(campaignId: string, targetId: string): boolean {
+    const campaign = this.findById(campaignId);
+    if (!campaign) return false;
+    const index = campaign.targets.findIndex((t) => t.id === targetId);
+    if (index === -1) return false;
+    campaign.targets.splice(index, 1);
+    return true;
+  }
+
+  updateTarget(campaignId: string, targetId: string, updates: Partial<CampaignTargetRecord>): CampaignTargetRecord | null {
+    const campaign = this.findById(campaignId);
+    if (!campaign) return null;
+    const target = campaign.targets.find((t) => t.id === targetId);
+    if (!target) return null;
+    Object.assign(target, updates);
+    return target;
+  }
+}
+
+export interface CampaignServiceOptions {
+  repository?: CampaignRepository;
+  now?: () => Date;
+}
+
+export class CampaignService {
+  private readonly repository: CampaignRepository;
+  private readonly now: () => Date;
+
+  constructor(options: CampaignServiceOptions = {}) {
+    this.repository = options.repository ?? new InMemoryCampaignRepository();
+    this.now = options.now ?? (() => new Date());
+  }
+
+  createCampaign(input: CreateCampaignInput): { campaign: CampaignRecord } {
+    const nowIso = this.now().toISOString();
+    const record: CampaignRecord = {
+      id: randomUUID(),
+      title: input.title,
+      videoAssetId: input.videoAssetId,
+      status: 'draft',
+      targets: [],
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    return { campaign: this.repository.create(record) };
+  }
+
+  addTarget(campaignId: string, input: AddTargetInput): { target: CampaignTargetRecord } {
+    const nowIso = this.now().toISOString();
+    const target: CampaignTargetRecord = {
+      id: randomUUID(),
+      campaignId,
+      channelId: input.channelId,
+      videoTitle: input.videoTitle,
+      videoDescription: input.videoDescription,
+      tags: input.tags ?? [],
+      privacy: input.privacy ?? 'private',
+      thumbnailAssetId: input.thumbnailAssetId ?? null,
+      status: 'aguardando',
+      youtubeVideoId: null,
+      errorMessage: null,
+      retryCount: 0,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    const result = this.repository.addTarget(campaignId, target);
+    if (!result) {
+      throw new Error(`Campaign ${campaignId} not found`);
+    }
+
+    return { target: result };
+  }
+
+  removeTarget(campaignId: string, targetId: string): boolean {
+    return this.repository.removeTarget(campaignId, targetId);
+  }
+
+  listCampaigns(): { campaigns: CampaignRecord[] } {
+    return { campaigns: this.repository.findAllNewestFirst() };
+  }
+
+  getCampaign(id: string): { campaign: CampaignRecord } | null {
+    const campaign = this.repository.findById(id);
+    if (!campaign) return null;
+    return { campaign };
+  }
+
+  markReady(campaignId: string): { campaign: CampaignRecord } | { error: 'NO_TARGETS' | 'NOT_FOUND' } {
+    const campaign = this.repository.findById(campaignId);
+    if (!campaign) return { error: 'NOT_FOUND' };
+    if (campaign.targets.length === 0) return { error: 'NO_TARGETS' };
+
+    const updated = this.repository.update(campaignId, {
+      status: 'ready',
+      updatedAt: this.now().toISOString(),
+    });
+
+    return { campaign: updated! };
+  }
+
+  launch(campaignId: string): { campaign: CampaignRecord } | { error: 'NOT_FOUND' | 'NOT_READY' } {
+    const campaign = this.repository.findById(campaignId);
+    if (!campaign) return { error: 'NOT_FOUND' };
+    if (campaign.status !== 'ready') return { error: 'NOT_READY' };
+
+    const updated = this.repository.update(campaignId, {
+      status: 'launching',
+      updatedAt: this.now().toISOString(),
+    });
+
+    return { campaign: updated! };
+  }
+
+  updateTargetStatus(
+    campaignId: string,
+    targetId: string,
+    status: CampaignTargetRecord['status'],
+    extra?: { youtubeVideoId?: string; errorMessage?: string },
+  ): { target: CampaignTargetRecord } | null {
+    const updates: Partial<CampaignTargetRecord> = {
+      status,
+      updatedAt: this.now().toISOString(),
+    };
+
+    if (extra?.youtubeVideoId) updates.youtubeVideoId = extra.youtubeVideoId;
+    if (extra?.errorMessage) updates.errorMessage = extra.errorMessage;
+
+    const target = this.repository.updateTarget(campaignId, targetId, updates);
+    if (!target) return null;
+
+    // Check if all targets completed/failed to update campaign status
+    const campaign = this.repository.findById(campaignId);
+    if (campaign) {
+      const allDone = campaign.targets.every((t) => t.status === 'publicado' || t.status === 'erro');
+      if (allDone) {
+        const anySuccess = campaign.targets.some((t) => t.status === 'publicado');
+        this.repository.update(campaignId, {
+          status: anySuccess ? 'completed' : 'failed',
+          updatedAt: this.now().toISOString(),
+        });
+      }
+    }
+
+    return { target };
+  }
+}
