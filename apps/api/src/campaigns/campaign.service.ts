@@ -22,6 +22,7 @@ export interface CampaignRecord {
   title: string;
   videoAssetId: string;
   status: 'draft' | 'ready' | 'launching' | 'completed' | 'failed';
+  scheduledAt: string | null;
   targets: CampaignTargetRecord[];
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,7 @@ export interface CampaignRecord {
 export interface CreateCampaignInput {
   title: string;
   videoAssetId: string;
+  scheduledAt?: string;
 }
 
 export interface AddTargetInput {
@@ -46,6 +48,7 @@ export interface CampaignRepository {
   findById(id: string): CampaignRecord | null;
   findAllNewestFirst(): CampaignRecord[];
   update(id: string, updates: Partial<CampaignRecord>): CampaignRecord | null;
+  delete(id: string): boolean;
   addTarget(campaignId: string, target: CampaignTargetRecord): CampaignTargetRecord | null;
   removeTarget(campaignId: string, targetId: string): boolean;
   updateTarget(campaignId: string, targetId: string, updates: Partial<CampaignTargetRecord>): CampaignTargetRecord | null;
@@ -72,6 +75,13 @@ export class InMemoryCampaignRepository implements CampaignRepository {
     if (!campaign) return null;
     Object.assign(campaign, updates);
     return campaign;
+  }
+
+  delete(id: string): boolean {
+    const index = this.campaigns.findIndex((c) => c.id === id);
+    if (index === -1) return false;
+    this.campaigns.splice(index, 1);
+    return true;
   }
 
   addTarget(campaignId: string, target: CampaignTargetRecord): CampaignTargetRecord | null {
@@ -121,6 +131,7 @@ export class CampaignService {
       title: input.title,
       videoAssetId: input.videoAssetId,
       status: 'draft',
+      scheduledAt: input.scheduledAt ?? null,
       targets: [],
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -227,5 +238,29 @@ export class CampaignService {
     }
 
     return { target };
+  }
+
+  deleteCampaign(campaignId: string): { deleted: boolean } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' } {
+    const campaign = this.repository.findById(campaignId);
+    if (!campaign) return { error: 'NOT_FOUND' };
+    if (campaign.status === 'launching') return { error: 'CAMPAIGN_ACTIVE' };
+
+    return { deleted: this.repository.delete(campaignId) };
+  }
+
+  updateCampaign(
+    campaignId: string,
+    updates: { title?: string; scheduledAt?: string },
+  ): { campaign: CampaignRecord } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' } {
+    const campaign = this.repository.findById(campaignId);
+    if (!campaign) return { error: 'NOT_FOUND' };
+    if (campaign.status === 'launching') return { error: 'CAMPAIGN_ACTIVE' };
+
+    const patch: Partial<CampaignRecord> = { updatedAt: this.now().toISOString() };
+    if (updates.title) patch.title = updates.title;
+    if (updates.scheduledAt !== undefined) patch.scheduledAt = updates.scheduledAt;
+
+    const updated = this.repository.update(campaignId, patch);
+    return { campaign: updated! };
   }
 }

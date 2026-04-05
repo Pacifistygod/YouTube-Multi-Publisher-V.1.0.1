@@ -5,6 +5,7 @@ export interface CampaignListRow {
   targetCount: number;
   status: string;
   createdAt: string;
+  scheduledAt?: string;
 }
 
 export interface CampaignListView {

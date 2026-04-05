@@ -2,6 +2,8 @@ import type { SessionRequestLike } from '../auth/session.guard';
 import { SessionGuard } from '../auth/session.guard';
 import type { CampaignRecord, CampaignTargetRecord } from './campaign.service';
 import { CampaignService } from './campaign.service';
+import type { LaunchService } from './launch.service';
+import type { CampaignStatusService } from './campaign-status.service';
 
 export interface CampaignsRequest extends SessionRequestLike {
   body?: unknown;
@@ -17,6 +19,8 @@ export class CampaignsController {
   constructor(
     private readonly campaignService: CampaignService,
     private readonly sessionGuard: SessionGuard,
+    private readonly launchService?: LaunchService,
+    private readonly statusService?: CampaignStatusService,
   ) {}
 
   async create(request: CampaignsRequest): Promise<ControllerResponse<{ campaign?: CampaignRecord; error?: string }>> {
@@ -25,7 +29,7 @@ export class CampaignsController {
       return { status: guardResult.status, body: { error: guardResult.reason } };
     }
 
-    const body = request.body as { title?: string; videoAssetId?: string } | undefined;
+    const body = request.body as { title?: string; videoAssetId?: string; scheduledAt?: string } | undefined;
     if (!body?.title || typeof body.title !== 'string' || !body.title.trim()) {
       return { status: 400, body: { error: 'Missing required field: title' } };
     }
@@ -36,6 +40,7 @@ export class CampaignsController {
     const result = this.campaignService.createCampaign({
       title: body.title.trim(),
       videoAssetId: body.videoAssetId,
+      scheduledAt: body.scheduledAt,
     });
 
     return { status: 201, body: result };
@@ -121,12 +126,107 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Missing campaign id' } };
     }
 
-    const result = this.campaignService.launch(campaignId);
+    const result = this.launchService
+      ? this.launchService.launchCampaign(campaignId)
+      : this.campaignService.launch(campaignId);
+
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') {
         return { status: 404, body: { error: 'Campaign not found' } };
       }
       return { status: 400, body: { error: `Cannot launch: campaign is not ready (${result.error})` } };
+    }
+
+    return { status: 200, body: result };
+  }
+
+  async getStatus(request: CampaignsRequest): Promise<ControllerResponse> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    const campaignId = request.params?.id;
+    if (!campaignId) {
+      return { status: 400, body: { error: 'Missing campaign id' } };
+    }
+
+    if (!this.statusService) {
+      return { status: 501, body: { error: 'Status service not available' } };
+    }
+
+    const result = this.statusService.getStatus(campaignId);
+    if (!result) {
+      return { status: 404, body: { error: 'Campaign not found' } };
+    }
+
+    return { status: 200, body: result };
+  }
+
+  async removeTarget(request: CampaignsRequest): Promise<ControllerResponse<{ error?: string }>> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    const campaignId = request.params?.id;
+    const targetId = request.params?.targetId;
+    if (!campaignId || !targetId) {
+      return { status: 400, body: { error: 'Missing campaign or target id' } };
+    }
+
+    const removed = this.campaignService.removeTarget(campaignId, targetId);
+    if (!removed) {
+      return { status: 404, body: { error: 'Target not found' } };
+    }
+
+    return { status: 200, body: {} };
+  }
+
+  async deleteCampaign(request: CampaignsRequest): Promise<ControllerResponse<{ error?: string }>> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    const campaignId = request.params?.id;
+    if (!campaignId) {
+      return { status: 400, body: { error: 'Missing campaign id' } };
+    }
+
+    const result = this.campaignService.deleteCampaign(campaignId);
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') {
+        return { status: 404, body: { error: 'Campaign not found' } };
+      }
+      return { status: 400, body: { error: 'Cannot delete an active campaign' } };
+    }
+
+    return { status: 200, body: {} };
+  }
+
+  async update(request: CampaignsRequest): Promise<ControllerResponse<{ campaign?: CampaignRecord; error?: string }>> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    const campaignId = request.params?.id;
+    if (!campaignId) {
+      return { status: 400, body: { error: 'Missing campaign id' } };
+    }
+
+    const body = request.body as { title?: string; scheduledAt?: string } | undefined;
+    const result = this.campaignService.updateCampaign(campaignId, {
+      title: body?.title,
+      scheduledAt: body?.scheduledAt,
+    });
+
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') {
+        return { status: 404, body: { error: 'Campaign not found' } };
+      }
+      return { status: 400, body: { error: 'Cannot update an active campaign' } };
     }
 
     return { status: 200, body: result };

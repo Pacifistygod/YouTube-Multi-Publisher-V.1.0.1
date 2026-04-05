@@ -6,6 +6,7 @@ export interface CampaignDetailTarget {
   youtubeVideoId: string | null;
   errorMessage: string | null;
   youtubeUrl?: string;
+  retryAvailable?: boolean;
 }
 
 export interface CampaignDetailData {
@@ -13,7 +14,10 @@ export interface CampaignDetailData {
   title: string;
   videoAssetName: string;
   status: string;
-  targets: Omit<CampaignDetailTarget, 'youtubeUrl'>[];
+  targets: (Omit<CampaignDetailTarget, 'youtubeUrl' | 'retryAvailable'> & {
+    retryCount?: number;
+    maxRetries?: number;
+  })[];
   createdAt: string;
 }
 
@@ -41,6 +45,11 @@ export function buildCampaignDetailView(data: CampaignDetailData): CampaignDetai
     youtubeUrl: t.youtubeVideoId
       ? `https://www.youtube.com/watch?v=${t.youtubeVideoId}`
       : undefined,
+    retryAvailable:
+      t.status === 'erro' &&
+      typeof t.retryCount === 'number' &&
+      typeof t.maxRetries === 'number' &&
+      t.retryCount < t.maxRetries,
   }));
 
   const allTerminal = targets.length > 0 && targets.every((t) => TERMINAL_STATUSES.has(t.status));
