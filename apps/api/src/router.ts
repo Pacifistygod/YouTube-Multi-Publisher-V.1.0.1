@@ -90,6 +90,12 @@ export function createApiRouter(options: {
   if (accountsController) {
     routes.push(
       {
+        method: 'PATCH',
+        pattern: /^\/api\/accounts\/([^/]+)\/channels\/([^/]+)$/,
+        paramNames: ['accountId', 'channelId'],
+        handler: (req: AccountsRequest) => accountsController.toggleChannel(req),
+      },
+      {
         method: 'GET',
         pattern: /^\/api\/accounts\/([^/]+)\/channels$/,
         paramNames: ['accountId'],
