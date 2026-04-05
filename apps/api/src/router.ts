@@ -45,6 +45,18 @@ export function createApiRouter(options: {
       handler: (req) => ctrl.getDashboard(req),
     },
     {
+      method: 'DELETE',
+      pattern: /^\/api\/campaigns\/([^/]+)\/targets\/([^/]+)$/,
+      paramNames: ['id', 'targetId'],
+      handler: (req) => ctrl.removeTarget(req),
+    },
+    {
+      method: 'PATCH',
+      pattern: /^\/api\/campaigns\/([^/]+)\/targets\/([^/]+)$/,
+      paramNames: ['id', 'targetId'],
+      handler: (req) => ctrl.updateTarget(req),
+    },
+    {
       method: 'POST',
       pattern: /^\/api\/campaigns\/([^/]+)\/targets\/([^/]+)\/retry$/,
       paramNames: ['id', 'targetId'],

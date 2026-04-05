@@ -171,6 +171,24 @@ export class CampaignService {
     return this.repository.removeTarget(campaignId, targetId);
   }
 
+  updateTarget(
+    campaignId: string,
+    targetId: string,
+    updates: { videoTitle?: string; videoDescription?: string; tags?: string[]; privacy?: string; thumbnailAssetId?: string },
+  ): { target: CampaignTargetRecord } | { error: 'NOT_FOUND' } {
+    const filtered: Partial<CampaignTargetRecord> = {};
+    if (updates.videoTitle !== undefined) filtered.videoTitle = updates.videoTitle;
+    if (updates.videoDescription !== undefined) filtered.videoDescription = updates.videoDescription;
+    if (updates.tags !== undefined) filtered.tags = updates.tags;
+    if (updates.privacy !== undefined) filtered.privacy = updates.privacy;
+    if (updates.thumbnailAssetId !== undefined) filtered.thumbnailAssetId = updates.thumbnailAssetId;
+    filtered.updatedAt = this.now().toISOString();
+
+    const target = this.repository.updateTarget(campaignId, targetId, filtered);
+    if (!target) return { error: 'NOT_FOUND' };
+    return { target };
+  }
+
   listCampaigns(): { campaigns: CampaignRecord[] } {
     return { campaigns: this.repository.findAllNewestFirst() };
   }

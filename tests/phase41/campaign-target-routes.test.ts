@@ -1,17 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { createApiRouter } from '../../apps/api/src/router';
-import { CampaignService } from '../../apps/api/src/campaigns/campaign.service';
-import { CampaignsController } from '../../apps/api/src/campaigns/campaigns.controller';
+import { createCampaignsModule } from '../../apps/api/src/campaigns/campaigns.module';
 import type { ApiRequest } from '../../apps/api/src/router';
 
 function setup() {
-  const campaignService = new CampaignService();
-  const campaignsController = new CampaignsController({ campaignService });
-  const router = createApiRouter({
-    campaignsModule: { campaignsController, campaignService },
-  });
+  const campaignsModule = createCampaignsModule();
+  const { campaignService } = campaignsModule;
+  const router = createApiRouter({ campaignsModule });
   const session = { adminUser: { id: 'admin-1', email: 'a@b.com' } };
-  return { campaignService, campaignsController, router, session };
+  return { campaignService, router, session };
 }
 
 function createCampaignWithTarget(campaignService: CampaignService) {

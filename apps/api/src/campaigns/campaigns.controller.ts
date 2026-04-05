@@ -187,6 +187,40 @@ export class CampaignsController {
     return { status: 200, body: {} };
   }
 
+  async updateTarget(request: CampaignsRequest): Promise<ControllerResponse<{ target?: CampaignTargetRecord; error?: string }>> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    const campaignId = request.params?.id;
+    const targetId = request.params?.targetId;
+    if (!campaignId || !targetId) {
+      return { status: 400, body: { error: 'Missing campaign or target id' } };
+    }
+
+    const body = request.body as {
+      videoTitle?: string;
+      videoDescription?: string;
+      tags?: string[];
+      privacy?: string;
+      thumbnailAssetId?: string;
+    } | undefined;
+
+    const hasUpdates = body && (body.videoTitle !== undefined || body.videoDescription !== undefined ||
+      body.tags !== undefined || body.privacy !== undefined || body.thumbnailAssetId !== undefined);
+    if (!hasUpdates) {
+      return { status: 400, body: { error: 'No updatable fields provided' } };
+    }
+
+    const result = this.campaignService.updateTarget(campaignId, targetId, body!);
+    if ('error' in result) {
+      return { status: 404, body: { error: 'Target not found' } };
+    }
+
+    return { status: 200, body: result };
+  }
+
   async deleteCampaign(request: CampaignsRequest): Promise<ControllerResponse<{ error?: string }>> {
     const guardResult = this.sessionGuard.check(request);
     if (!guardResult.allowed) {
