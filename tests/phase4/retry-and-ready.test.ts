@@ -19,6 +19,7 @@ function createFullStack() {
     new SessionGuard(),
     launchService,
     statusService,
+    jobService,
   );
 
   return { campaignService, jobService, launchService, statusService, controller };

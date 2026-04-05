@@ -4,6 +4,7 @@ import type { CampaignRecord, CampaignTargetRecord } from './campaign.service';
 import { CampaignService } from './campaign.service';
 import type { LaunchService } from './launch.service';
 import type { CampaignStatusService } from './campaign-status.service';
+import type { PublishJobService, PublishJobRecord } from './publish-job.service';
 
 export interface CampaignsRequest extends SessionRequestLike {
   body?: unknown;
@@ -21,6 +22,7 @@ export class CampaignsController {
     private readonly sessionGuard: SessionGuard,
     private readonly launchService?: LaunchService,
     private readonly statusService?: CampaignStatusService,
+    private readonly jobService?: PublishJobService,
   ) {}
 
   async create(request: CampaignsRequest): Promise<ControllerResponse<{ campaign?: CampaignRecord; error?: string }>> {
@@ -227,6 +229,74 @@ export class CampaignsController {
         return { status: 404, body: { error: 'Campaign not found' } };
       }
       return { status: 400, body: { error: 'Cannot update an active campaign' } };
+    }
+
+    return { status: 200, body: result };
+  }
+
+  async retryTarget(request: CampaignsRequest): Promise<ControllerResponse<{ job?: PublishJobRecord; error?: string }>> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    const campaignId = request.params?.id;
+    const targetId = request.params?.targetId;
+    if (!campaignId || !targetId) {
+      return { status: 400, body: { error: 'Missing campaign or target id' } };
+    }
+
+    if (!this.jobService) {
+      return { status: 501, body: { error: 'Job service not available' } };
+    }
+
+    // Verify the target exists in this campaign
+    const campaignResult = this.campaignService.getCampaign(campaignId);
+    if (!campaignResult) {
+      return { status: 404, body: { error: 'Campaign not found' } };
+    }
+    const target = campaignResult.campaign.targets.find((t) => t.id === targetId);
+    if (!target) {
+      return { status: 404, body: { error: 'Target not found' } };
+    }
+
+    // Find the latest failed job for this target
+    const jobs = this.jobService.getJobsForTarget(targetId);
+    const failedJob = [...jobs].reverse().find((j) => j.status === 'failed');
+    if (!failedJob) {
+      return { status: 400, body: { error: 'No failed job to retry' } };
+    }
+
+    const result = this.jobService.retry(failedJob.id);
+    if ('error' in result) {
+      return { status: 400, body: { error: result.error } };
+    }
+
+    // Reset target status back to aguardando
+    this.campaignService.updateTargetStatus(campaignId, targetId, 'aguardando', {
+      errorMessage: null,
+    });
+
+    return { status: 200, body: { job: result } };
+  }
+
+  async markReady(request: CampaignsRequest): Promise<ControllerResponse<{ campaign?: CampaignRecord; error?: string }>> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    const campaignId = request.params?.id;
+    if (!campaignId) {
+      return { status: 400, body: { error: 'Missing campaign id' } };
+    }
+
+    const result = this.campaignService.markReady(campaignId);
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') {
+        return { status: 404, body: { error: 'Campaign not found' } };
+      }
+      return { status: 400, body: { error: `Cannot mark ready: ${result.error}` } };
     }
 
     return { status: 200, body: result };

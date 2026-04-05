@@ -94,6 +94,7 @@ model Campaign {
   videoAssetId     String         @map("video_asset_id")
   videoAsset       MediaAsset     @relation(fields: [videoAssetId], references: [id])
   status           CampaignStatus @default(draft)
+  scheduledAt      DateTime?      @map("scheduled_at")
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
