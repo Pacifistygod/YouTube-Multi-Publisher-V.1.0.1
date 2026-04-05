@@ -161,8 +161,11 @@ describe('workspace layout includes Campanhas tab', () => {
       '../../apps/web/app/(admin)/workspace/layout'
     );
 
-    const mockFetcher = async () => ({ email: 'admin@example.com' });
-    const view = await buildWorkspaceLayout({ fetcher: mockFetcher });
+    const mockFetcher = async () => ({
+      status: 200,
+      json: async () => ({ user: { email: 'admin@example.com' } }),
+    });
+    const view = await buildWorkspaceLayout({ fetcher: mockFetcher as any });
 
     const tabIds = view.tabs?.map((t) => t.id);
     expect(tabIds).toContain('campanhas');

@@ -49,6 +49,7 @@ describe('protected workspace shell', () => {
     expect(result.tabs).toEqual([
       { id: 'accounts', label: 'Accounts', selected: true },
       { id: 'media', label: 'Media', selected: false },
+      { id: 'campanhas', label: 'Campanhas', selected: false },
     ]);
     expect(result.emptyStates.accounts).toEqual({
       heading: 'No accounts connected',
