@@ -47,8 +47,10 @@ describe('Graceful Shutdown', () => {
       throw new Error('cleanup failed');
     });
 
-    // Should not throw
-    await expect(instance.shutdown()).resolves.toBeUndefined();
+    // Should not throw — resolves with result containing errors
+    const result = await instance.shutdown();
+    expect(result).toBeDefined();
+    expect(result.errors).toHaveLength(1);
   });
 
   it('collects errors from failed cleanup handlers', async () => {
