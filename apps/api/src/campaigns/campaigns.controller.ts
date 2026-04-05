@@ -5,6 +5,7 @@ import { CampaignService } from './campaign.service';
 import type { LaunchService } from './launch.service';
 import type { CampaignStatusService } from './campaign-status.service';
 import type { PublishJobService, PublishJobRecord } from './publish-job.service';
+import type { DashboardService, DashboardStats } from './dashboard.service';
 
 export interface CampaignsRequest extends SessionRequestLike {
   body?: unknown;
@@ -23,6 +24,7 @@ export class CampaignsController {
     private readonly launchService?: LaunchService,
     private readonly statusService?: CampaignStatusService,
     private readonly jobService?: PublishJobService,
+    private readonly dashboardService?: DashboardService,
   ) {}
 
   async create(request: CampaignsRequest): Promise<ControllerResponse<{ campaign?: CampaignRecord; error?: string }>> {
@@ -300,5 +302,18 @@ export class CampaignsController {
     }
 
     return { status: 200, body: result };
+  }
+
+  async getDashboard(request: SessionRequestLike): Promise<ControllerResponse<DashboardStats | { error: string }>> {
+    const guardResult = this.sessionGuard.check(request);
+    if (!guardResult.allowed) {
+      return { status: guardResult.status, body: { error: guardResult.reason } };
+    }
+
+    if (!this.dashboardService) {
+      return { status: 501, body: { error: 'Dashboard service not available' } };
+    }
+
+    return { status: 200, body: this.dashboardService.getStats() };
   }
 }

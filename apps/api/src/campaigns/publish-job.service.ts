@@ -17,6 +17,7 @@ export interface PublishJobRepository {
   create(record: PublishJobRecord): PublishJobRecord;
   findById(id: string): PublishJobRecord | null;
   findByTargetId(targetId: string): PublishJobRecord[];
+  findAll(): PublishJobRecord[];
   findNextQueued(): PublishJobRecord | null;
   update(id: string, updates: Partial<PublishJobRecord>): PublishJobRecord | null;
 }
@@ -35,6 +36,10 @@ export class InMemoryPublishJobRepository implements PublishJobRepository {
 
   findByTargetId(targetId: string): PublishJobRecord[] {
     return this.jobs.filter((j) => j.campaignTargetId === targetId);
+  }
+
+  findAll(): PublishJobRecord[] {
+    return [...this.jobs];
   }
 
   findNextQueued(): PublishJobRecord | null {
@@ -129,5 +134,9 @@ export class PublishJobService {
 
   getJobsForTarget(targetId: string): PublishJobRecord[] {
     return this.repository.findByTargetId(targetId);
+  }
+
+  getAllJobs(): PublishJobRecord[] {
+    return this.repository.findAll();
   }
 }
