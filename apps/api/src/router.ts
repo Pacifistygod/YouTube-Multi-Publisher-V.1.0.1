@@ -1,6 +1,8 @@
 import type { AdminSession } from './auth/session.guard';
 import type { CampaignsModuleInstance } from './campaigns/campaigns.module';
 import type { CampaignsRequest } from './campaigns/campaigns.controller';
+import type { AccountsController, AccountsRequest } from './accounts/accounts.controller';
+import type { MediaController, MediaRequest } from './media/media.controller';
 
 export interface ApiRequest {
   method: string;
@@ -18,7 +20,7 @@ interface Route {
   method: string;
   pattern: RegExp;
   paramNames: string[];
-  handler: (request: CampaignsRequest) => Promise<{ status: number; body: any }>;
+  handler: (request: any) => Promise<{ status: number; body: any }> | { status: number; body: any };
 }
 
 export interface ApiRouter {
@@ -27,8 +29,10 @@ export interface ApiRouter {
 
 export function createApiRouter(options: {
   campaignsModule: CampaignsModuleInstance;
+  accountsController?: AccountsController;
+  mediaController?: MediaController;
 }): ApiRouter {
-  const { campaignsModule } = options;
+  const { campaignsModule, accountsController, mediaController } = options;
   const ctrl = campaignsModule.campaignsController;
 
   const routes: Route[] = [
@@ -82,6 +86,66 @@ export function createApiRouter(options: {
     },
   ];
 
+  // Account routes
+  if (accountsController) {
+    routes.push(
+      {
+        method: 'GET',
+        pattern: /^\/api\/accounts\/([^/]+)\/channels$/,
+        paramNames: ['accountId'],
+        handler: (req: AccountsRequest) => accountsController.getChannels(req),
+      },
+      {
+        method: 'GET',
+        pattern: /^\/api\/accounts\/([^/]+)$/,
+        paramNames: ['accountId'],
+        handler: (req: AccountsRequest) => accountsController.getAccount(req),
+      },
+      {
+        method: 'DELETE',
+        pattern: /^\/api\/accounts\/([^/]+)$/,
+        paramNames: ['accountId'],
+        handler: (req: AccountsRequest) => accountsController.disconnectAccount(req),
+      },
+      {
+        method: 'GET',
+        pattern: /^\/api\/accounts$/,
+        paramNames: [],
+        handler: (req: AccountsRequest) => accountsController.listAccounts(req),
+      },
+    );
+  }
+
+  // Media routes
+  if (mediaController) {
+    routes.push(
+      {
+        method: 'POST',
+        pattern: /^\/api\/media\/([^/]+)\/link-thumbnail$/,
+        paramNames: ['id'],
+        handler: (req: MediaRequest) => mediaController.linkThumbnail(req),
+      },
+      {
+        method: 'GET',
+        pattern: /^\/api\/media\/([^/]+)$/,
+        paramNames: ['id'],
+        handler: (req: MediaRequest) => mediaController.getAsset(req),
+      },
+      {
+        method: 'DELETE',
+        pattern: /^\/api\/media\/([^/]+)$/,
+        paramNames: ['id'],
+        handler: (req: MediaRequest) => mediaController.deleteAsset(req),
+      },
+      {
+        method: 'GET',
+        pattern: /^\/api\/media$/,
+        paramNames: [],
+        handler: (req: MediaRequest) => mediaController.listAssets(req),
+      },
+    );
+  }
+
   return {
     async handle(request: ApiRequest): Promise<ApiResponse> {
       for (const route of routes) {
@@ -95,7 +159,7 @@ export function createApiRouter(options: {
           params[name] = match[i + 1];
         });
 
-        const controllerRequest: CampaignsRequest = {
+        const controllerRequest = {
           session: request.session,
           body: request.body,
           params,
