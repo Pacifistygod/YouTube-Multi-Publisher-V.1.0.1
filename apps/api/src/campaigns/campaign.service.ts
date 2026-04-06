@@ -287,7 +287,7 @@ export class CampaignService {
     campaignId: string,
     targetId: string,
     status: CampaignTargetRecord['status'],
-    extra?: { youtubeVideoId?: string; errorMessage?: string },
+    extra?: { youtubeVideoId?: string; errorMessage?: string | null },
   ): Promise<{ target: CampaignTargetRecord } | null> {
     const updates: Partial<CampaignTargetRecord> = {
       status,
@@ -295,7 +295,7 @@ export class CampaignService {
     };
 
     if (extra?.youtubeVideoId) updates.youtubeVideoId = extra.youtubeVideoId;
-    if (extra?.errorMessage) updates.errorMessage = extra.errorMessage;
+    if (extra && 'errorMessage' in extra) updates.errorMessage = extra.errorMessage ?? null;
 
     const target = await this.repository.updateTarget(campaignId, targetId, updates);
     if (!target) return null;

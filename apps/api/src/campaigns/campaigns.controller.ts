@@ -17,6 +17,21 @@ interface ControllerResponse<T = unknown> {
   body: T;
 }
 
+function parseQueryInteger(rawValue: string | undefined, options?: { allowNegative?: boolean }): number | undefined {
+  if (rawValue === undefined) {
+    return undefined;
+  }
+
+  const normalized = rawValue.trim();
+  const pattern = options?.allowNegative ? /^-?\d+$/ : /^\d+$/;
+
+  if (!pattern.test(normalized)) {
+    return undefined;
+  }
+
+  return Number(normalized);
+}
+
 export class CampaignsController {
   constructor(
     private readonly campaignService: CampaignService,
@@ -59,8 +74,16 @@ export class CampaignsController {
     const filters: { status?: string; search?: string; limit?: number; offset?: number } = {};
     if (request.query?.status) filters.status = request.query.status;
     if (request.query?.search) filters.search = request.query.search;
-    if (request.query?.limit) filters.limit = parseInt(request.query.limit, 10);
-    if (request.query?.offset) filters.offset = parseInt(request.query.offset, 10);
+
+    const parsedLimit = parseQueryInteger(request.query?.limit);
+    if (parsedLimit !== undefined) {
+      filters.limit = parsedLimit;
+    }
+
+    const parsedOffset = parseQueryInteger(request.query?.offset, { allowNegative: true });
+    if (parsedOffset !== undefined) {
+      filters.offset = parsedOffset;
+    }
 
     const result = await this.campaignService.listCampaigns(Object.keys(filters).length > 0 ? filters : undefined);
     return { status: 200, body: result };
