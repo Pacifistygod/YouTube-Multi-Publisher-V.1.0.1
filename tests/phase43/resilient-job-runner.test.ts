@@ -80,10 +80,14 @@ describe('ResilientJobRunner', () => {
   });
 
   it('gives up after exhausting retries', async () => {
+    let callCount = 0;
     const { runner, retryJob } = createRunner({
       maxRetries: 2,
       processNext: vi.fn(async () => {
-        return makeFailedJob('job-1');
+        callCount++;
+        // 1 initial + 2 retries = 3 calls, then null
+        if (callCount <= 3) return makeFailedJob('job-1');
+        return null;
       }),
       retryJob: vi.fn(() => makeJob({ status: 'queued' })),
     });
@@ -97,12 +101,17 @@ describe('ResilientJobRunner', () => {
 
   it('applies exponential backoff delays between retries', async () => {
     const delays: number[] = [];
+    let callCount = 0;
     const { runner } = createRunner({
       maxRetries: 3,
       baseDelayMs: 100,
       backoffMultiplier: 2,
       _delayFn: async (ms: number) => { delays.push(ms); },
-      processNext: vi.fn(async () => makeFailedJob('job-1')),
+      processNext: vi.fn(async () => {
+        callCount++;
+        if (callCount <= 4) return makeFailedJob('job-1');
+        return null;
+      }),
       retryJob: vi.fn(() => makeJob({ status: 'queued' })),
     });
 
@@ -119,7 +128,8 @@ describe('ResilientJobRunner', () => {
       processNext: vi.fn(async () => {
         callCount++;
         if (callCount <= 2) return makeFailedJob('job-1');
-        return makeJob({ id: 'job-1' });
+        if (callCount === 3) return makeJob({ id: 'job-1' });
+        return null;
       }),
       retryJob: vi.fn(() => makeJob({ status: 'queued' })),
     });
