@@ -1,5 +1,6 @@
 import { createServer as createHttpServer } from 'node:http';
 import { bootstrap, type BootstrapOptions, type BootstrapResult } from './bootstrap';
+import { createGracefulShutdown } from './lifecycle/graceful-shutdown';
 
 export interface StartServerOptions {
   env: Record<string, string | undefined>;
@@ -50,11 +51,28 @@ export async function startServer(options: StartServerOptions): Promise<StartSer
     });
   });
 
-  const shutdown = async (): Promise<void> => {
+  const gracefulShutdown = createGracefulShutdown({ timeoutMs: 10_000 });
+
+  const handleSignal = async (): Promise<void> => {
+    await shutdown();
+  };
+
+  process.on('SIGINT', handleSignal);
+  process.on('SIGTERM', handleSignal);
+
+  gracefulShutdown.onShutdown(async () => {
+    process.removeListener('SIGINT', handleSignal);
+    process.removeListener('SIGTERM', handleSignal);
+
     await new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()));
     });
+
     await bootstrapResult.databaseProvider.disconnect();
+  });
+
+  const shutdown = async (): Promise<void> => {
+    await gracefulShutdown.shutdown();
   };
 
   return { port, bootstrapResult, shutdown };
