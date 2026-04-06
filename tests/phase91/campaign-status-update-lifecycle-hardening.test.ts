@@ -7,7 +7,7 @@ function createService() {
 }
 
 describe('campaign status update lifecycle hardening', () => {
-  test('updateTargetStatus does not bypass launch while the campaign is still draft', async () => {
+  test('updateTargetStatus promotes a draft campaign to launching once work starts', async () => {
     const service = createService();
 
     const { campaign } = await service.createCampaign({ title: 'Draft Campaign', videoAssetId: 'asset-1' });
@@ -16,20 +16,28 @@ describe('campaign status update lifecycle hardening', () => {
       videoTitle: 'Original Title',
       videoDescription: 'Original Desc',
     });
-
-    const result = await service.updateTargetStatus(campaign.id, target.id, 'publicado', {
-      youtubeVideoId: 'yt-draft',
+    await service.addTarget(campaign.id, {
+      channelId: 'ch-2',
+      videoTitle: 'Second Title',
+      videoDescription: 'Second Desc',
     });
 
-    expect(result).toBeNull();
+    const result = await service.updateTargetStatus(campaign.id, target.id, 'enviando');
+
+    expect(result).toEqual({
+      target: expect.objectContaining({
+        id: target.id,
+        status: 'enviando',
+      }),
+    });
 
     const persisted = await service.getCampaign(campaign.id);
-    expect(persisted!.campaign.status).toBe('draft');
-    expect(persisted!.campaign.targets[0].status).toBe('aguardando');
-    expect(persisted!.campaign.targets[0].youtubeVideoId).toBeNull();
+    expect(persisted!.campaign.status).toBe('launching');
+    expect(persisted!.campaign.targets[0].status).toBe('enviando');
+    expect(persisted!.campaign.targets[1].status).toBe('aguardando');
   });
 
-  test('updateTargetStatus does not bypass launch while the campaign is only ready', async () => {
+  test('updateTargetStatus promotes a ready campaign to launching until all targets finish', async () => {
     const service = createService();
 
     const { campaign } = await service.createCampaign({ title: 'Ready Campaign', videoAssetId: 'asset-1' });
@@ -38,17 +46,28 @@ describe('campaign status update lifecycle hardening', () => {
       videoTitle: 'Original Title',
       videoDescription: 'Original Desc',
     });
+    await service.addTarget(campaign.id, {
+      channelId: 'ch-2',
+      videoTitle: 'Second Title',
+      videoDescription: 'Second Desc',
+    });
     await service.markReady(campaign.id);
 
-    const result = await service.updateTargetStatus(campaign.id, target.id, 'erro', {
-      errorMessage: 'should not mutate before launch',
+    const result = await service.updateTargetStatus(campaign.id, target.id, 'publicado', {
+      youtubeVideoId: 'yt-ready',
     });
 
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      target: expect.objectContaining({
+        id: target.id,
+        status: 'publicado',
+        youtubeVideoId: 'yt-ready',
+      }),
+    });
 
     const persisted = await service.getCampaign(campaign.id);
-    expect(persisted!.campaign.status).toBe('ready');
-    expect(persisted!.campaign.targets[0].status).toBe('aguardando');
-    expect(persisted!.campaign.targets[0].errorMessage).toBeNull();
+    expect(persisted!.campaign.status).toBe('launching');
+    expect(persisted!.campaign.targets[0].status).toBe('publicado');
+    expect(persisted!.campaign.targets[1].status).toBe('aguardando');
   });
 });

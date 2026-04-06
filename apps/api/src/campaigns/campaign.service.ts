@@ -324,6 +324,9 @@ export class CampaignService {
     status: CampaignTargetRecord['status'],
     extra?: { youtubeVideoId?: string; errorMessage?: string | null },
   ): Promise<{ target: CampaignTargetRecord } | null> {
+    const campaign = await this.repository.findById(campaignId);
+    if (!campaign) return null;
+
     const updates: Partial<CampaignTargetRecord> = {
       status,
       updatedAt: this.now().toISOString(),
@@ -336,20 +339,25 @@ export class CampaignService {
     if (!target) return null;
 
     // Check if target progress changed overall campaign lifecycle state
-    const campaign = await this.repository.findById(campaignId);
-    if (campaign) {
-      const allDone = campaign.targets.every((t) => t.status === 'publicado' || t.status === 'erro');
+    const refreshedCampaign = await this.repository.findById(campaignId);
+    if (refreshedCampaign) {
+      const allDone = refreshedCampaign.targets.every((t) => t.status === 'publicado' || t.status === 'erro');
       if (allDone) {
-        const anySuccess = campaign.targets.some((t) => t.status === 'publicado');
+        const anySuccess = refreshedCampaign.targets.some((t) => t.status === 'publicado');
         await this.repository.update(campaignId, {
           status: anySuccess ? 'completed' : 'failed',
           updatedAt: this.now().toISOString(),
         });
-      } else if (campaign.status !== 'draft' && campaign.status !== 'ready' && campaign.status !== 'launching') {
-        await this.repository.update(campaignId, {
-          status: 'launching',
-          updatedAt: this.now().toISOString(),
-        });
+      } else {
+        const shouldBeLaunching = refreshedCampaign.status !== 'launching' &&
+          (refreshedCampaign.status === 'completed' || refreshedCampaign.status === 'failed' || status !== 'aguardando');
+
+        if (shouldBeLaunching) {
+          await this.repository.update(campaignId, {
+            status: 'launching',
+            updatedAt: this.now().toISOString(),
+          });
+        }
       }
     }
 
