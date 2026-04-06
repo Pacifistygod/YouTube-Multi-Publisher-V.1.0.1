@@ -380,7 +380,12 @@ export class CampaignsController {
     }
 
     const body = request.body as { title?: string } | undefined;
-    const result = await this.campaignService.cloneCampaign(campaignId, body?.title ? { title: body.title } : undefined);
+    const title = body?.title === undefined ? undefined : normalizeNonEmptyString(body.title);
+    if (body?.title !== undefined && !title) {
+      return { status: 400, body: { error: 'Invalid title: title must not be blank' } };
+    }
+
+    const result = await this.campaignService.cloneCampaign(campaignId, title ? { title } : undefined);
     if ('error' in result) {
       return { status: 404, body: { error: 'Campaign not found' } };
     }
