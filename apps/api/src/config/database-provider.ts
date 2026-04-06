@@ -2,6 +2,7 @@ import { PrismaConnectedAccountRepository } from '../accounts/prisma-connected-a
 import { PrismaCampaignRepository } from '../campaigns/prisma-campaign.repository';
 import { PrismaPublishJobRepository } from '../campaigns/prisma-publish-job.repository';
 import { PrismaYouTubeChannelRepository } from '../channels/prisma-youtube-channel.repository';
+import { PrismaMediaAssetRepository } from '../media/prisma-media-asset.repository';
 
 export interface DatabaseProviderOptions {
   databaseUrl?: string;
@@ -13,6 +14,7 @@ export interface DatabaseProviderInstance {
   publishJobRepository: PrismaPublishJobRepository | null;
   connectedAccountRepository: PrismaConnectedAccountRepository | null;
   youtubeChannelRepository: PrismaYouTubeChannelRepository | null;
+  mediaAssetRepository: PrismaMediaAssetRepository | null;
   isConnected(): boolean;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
@@ -27,6 +29,7 @@ export function createDatabaseProvider(options: DatabaseProviderOptions): Databa
   let publishJobRepository: PrismaPublishJobRepository | null = null;
   let connectedAccountRepository: PrismaConnectedAccountRepository | null = null;
   let youtubeChannelRepository: PrismaYouTubeChannelRepository | null = null;
+  let mediaAssetRepository: PrismaMediaAssetRepository | null = null;
 
   if (databaseUrl) {
     if (_prismaFactory) {
@@ -35,6 +38,7 @@ export function createDatabaseProvider(options: DatabaseProviderOptions): Databa
       publishJobRepository = new PrismaPublishJobRepository(prismaClient);
       connectedAccountRepository = new PrismaConnectedAccountRepository(prismaClient);
       youtubeChannelRepository = new PrismaYouTubeChannelRepository(prismaClient);
+      mediaAssetRepository = new PrismaMediaAssetRepository(prismaClient);
     }
   }
 
@@ -53,6 +57,10 @@ export function createDatabaseProvider(options: DatabaseProviderOptions): Databa
 
     get youtubeChannelRepository() {
       return youtubeChannelRepository;
+    },
+
+    get mediaAssetRepository() {
+      return mediaAssetRepository;
     },
 
     isConnected() {
