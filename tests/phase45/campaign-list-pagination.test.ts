@@ -12,10 +12,10 @@ function setup() {
   return { campaignService, router };
 }
 
-function seedMany(campaignService: ReturnType<typeof setup>['campaignService'], count: number) {
+async function seedMany(campaignService: ReturnType<typeof setup>['campaignService'], count: number) {
   const campaigns = [];
   for (let i = 0; i < count; i++) {
-    const result = campaignService.createCampaign({ title: `Campaign ${i + 1}`, videoAssetId: `v-${i + 1}` });
+    const result = await campaignService.createCampaign({ title: `Campaign ${i + 1}`, videoAssetId: `v-${i + 1}` });
     campaigns.push(result.campaign);
   }
   return campaigns;
@@ -25,7 +25,7 @@ describe('Campaign List Pagination', () => {
   describe('response envelope', () => {
     it('returns total, limit, and offset in response', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 3);
+      await seedMany(campaignService, 3);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -45,7 +45,7 @@ describe('Campaign List Pagination', () => {
   describe('limit', () => {
     it('limits results to specified count', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 5);
+      await seedMany(campaignService, 5);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -64,7 +64,7 @@ describe('Campaign List Pagination', () => {
 
     it('defaults to 20 when not specified', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 25);
+      await seedMany(campaignService, 25);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -81,7 +81,7 @@ describe('Campaign List Pagination', () => {
   describe('offset', () => {
     it('skips items by offset', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 5);
+      await seedMany(campaignService, 5);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -98,7 +98,7 @@ describe('Campaign List Pagination', () => {
 
     it('returns empty when offset exceeds total', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 3);
+      await seedMany(campaignService, 3);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -116,14 +116,14 @@ describe('Campaign List Pagination', () => {
   describe('pagination with filters', () => {
     it('applies pagination after status filter', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 5);
+      await seedMany(campaignService, 5);
       // Make campaigns 3 and 4 ready
-      const all = campaignService.listCampaigns();
+      const all = await campaignService.listCampaigns();
       const drafts = all.campaigns.filter((c) => c.status === 'draft');
       // add target + markReady on first two drafts (newest first, so index 0 and 1)
       for (const c of [drafts[0], drafts[1]]) {
-        campaignService.addTarget(c.id, { channelId: 'ch-1', videoTitle: 'T', videoDescription: 'D' });
-        campaignService.markReady(c.id);
+        await campaignService.addTarget(c.id, { channelId: 'ch-1', videoTitle: 'T', videoDescription: 'D' });
+        await campaignService.markReady(c.id);
       }
 
       const request: ApiRequest = {
@@ -141,10 +141,10 @@ describe('Campaign List Pagination', () => {
 
     it('applies pagination after search filter', async () => {
       const { campaignService, router } = setup();
-      campaignService.createCampaign({ title: 'Alpha One', videoAssetId: 'v-1' });
-      campaignService.createCampaign({ title: 'Alpha Two', videoAssetId: 'v-2' });
-      campaignService.createCampaign({ title: 'Alpha Three', videoAssetId: 'v-3' });
-      campaignService.createCampaign({ title: 'Beta One', videoAssetId: 'v-4' });
+      await campaignService.createCampaign({ title: 'Alpha One', videoAssetId: 'v-1' });
+      await campaignService.createCampaign({ title: 'Alpha Two', videoAssetId: 'v-2' });
+      await campaignService.createCampaign({ title: 'Alpha Three', videoAssetId: 'v-3' });
+      await campaignService.createCampaign({ title: 'Beta One', videoAssetId: 'v-4' });
 
       const request: ApiRequest = {
         method: 'GET',
@@ -162,7 +162,7 @@ describe('Campaign List Pagination', () => {
   describe('edge cases', () => {
     it('clamps negative offset to 0', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 3);
+      await seedMany(campaignService, 3);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -178,7 +178,7 @@ describe('Campaign List Pagination', () => {
 
     it('clamps limit to minimum 1', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 3);
+      await seedMany(campaignService, 3);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -194,7 +194,7 @@ describe('Campaign List Pagination', () => {
 
     it('clamps limit to maximum 100', async () => {
       const { campaignService, router } = setup();
-      seedMany(campaignService, 3);
+      await seedMany(campaignService, 3);
 
       const request: ApiRequest = {
         method: 'GET',

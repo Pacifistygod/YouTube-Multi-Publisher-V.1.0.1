@@ -79,7 +79,7 @@ describe('App Route Consolidation', () => {
   describe('POST /api/campaigns/:id/targets in router', () => {
     it('adds a target and returns 201', async () => {
       const { campaignsModule, router } = setup();
-      const { campaign } = campaignsModule.campaignService.createCampaign({
+      const { campaign } = await campaignsModule.campaignService.createCampaign({
         title: 'Test',
         videoAssetId: 'v-1',
       });
@@ -102,7 +102,7 @@ describe('App Route Consolidation', () => {
 
     it('returns 401 without session', async () => {
       const { campaignsModule, router } = setup();
-      const { campaign } = campaignsModule.campaignService.createCampaign({
+      const { campaign } = await campaignsModule.campaignService.createCampaign({
         title: 'Test',
         videoAssetId: 'v-1',
       });
@@ -126,11 +126,11 @@ describe('App Route Consolidation', () => {
   describe('POST /api/campaigns/:id/ready in router', () => {
     it('marks campaign ready and returns 200', async () => {
       const { campaignsModule, router } = setup();
-      const { campaign } = campaignsModule.campaignService.createCampaign({
+      const { campaign } = await campaignsModule.campaignService.createCampaign({
         title: 'Test',
         videoAssetId: 'v-1',
       });
-      campaignsModule.campaignService.addTarget(campaign.id, {
+      await campaignsModule.campaignService.addTarget(campaign.id, {
         channelId: 'ch-1',
         videoTitle: 'T',
         videoDescription: 'D',
@@ -149,7 +149,7 @@ describe('App Route Consolidation', () => {
 
     it('returns 400 for campaign with no targets', async () => {
       const { campaignsModule, router } = setup();
-      const { campaign } = campaignsModule.campaignService.createCampaign({
+      const { campaign } = await campaignsModule.campaignService.createCampaign({
         title: 'Test',
         videoAssetId: 'v-1',
       });
@@ -180,7 +180,7 @@ describe('App Route Consolidation', () => {
   describe('Duplicate PATCH removed from app.ts', () => {
     it('PATCH /api/campaigns/:id still works through router', async () => {
       const { campaignsModule, router } = setup();
-      const { campaign } = campaignsModule.campaignService.createCampaign({
+      const { campaign } = await campaignsModule.campaignService.createCampaign({
         title: 'Original',
         videoAssetId: 'v-1',
       });

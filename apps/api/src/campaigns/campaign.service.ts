@@ -44,14 +44,14 @@ export interface AddTargetInput {
 }
 
 export interface CampaignRepository {
-  create(record: CampaignRecord): CampaignRecord;
-  findById(id: string): CampaignRecord | null;
-  findAllNewestFirst(): CampaignRecord[];
-  update(id: string, updates: Partial<CampaignRecord>): CampaignRecord | null;
-  delete(id: string): boolean;
-  addTarget(campaignId: string, target: CampaignTargetRecord): CampaignTargetRecord | null;
-  removeTarget(campaignId: string, targetId: string): boolean;
-  updateTarget(campaignId: string, targetId: string, updates: Partial<CampaignTargetRecord>): CampaignTargetRecord | null;
+  create(record: CampaignRecord): Promise<CampaignRecord> | CampaignRecord;
+  findById(id: string): Promise<CampaignRecord | null> | CampaignRecord | null;
+  findAllNewestFirst(): Promise<CampaignRecord[]> | CampaignRecord[];
+  update(id: string, updates: Partial<CampaignRecord>): Promise<CampaignRecord | null> | CampaignRecord | null;
+  delete(id: string): Promise<boolean> | boolean;
+  addTarget(campaignId: string, target: CampaignTargetRecord): Promise<CampaignTargetRecord | null> | CampaignTargetRecord | null;
+  removeTarget(campaignId: string, targetId: string): Promise<boolean> | boolean;
+  updateTarget(campaignId: string, targetId: string, updates: Partial<CampaignTargetRecord>): Promise<CampaignTargetRecord | null> | CampaignTargetRecord | null;
 }
 
 export class InMemoryCampaignRepository implements CampaignRepository {
@@ -124,7 +124,7 @@ export class CampaignService {
     this.now = options.now ?? (() => new Date());
   }
 
-  createCampaign(input: CreateCampaignInput): { campaign: CampaignRecord } {
+  async createCampaign(input: CreateCampaignInput): Promise<{ campaign: CampaignRecord }> {
     const nowIso = this.now().toISOString();
     const record: CampaignRecord = {
       id: randomUUID(),
@@ -137,10 +137,10 @@ export class CampaignService {
       updatedAt: nowIso,
     };
 
-    return { campaign: this.repository.create(record) };
+    return { campaign: await this.repository.create(record) };
   }
 
-  addTarget(campaignId: string, input: AddTargetInput): { target: CampaignTargetRecord } {
+  async addTarget(campaignId: string, input: AddTargetInput): Promise<{ target: CampaignTargetRecord }> {
     const nowIso = this.now().toISOString();
     const target: CampaignTargetRecord = {
       id: randomUUID(),
@@ -159,7 +159,7 @@ export class CampaignService {
       updatedAt: nowIso,
     };
 
-    const result = this.repository.addTarget(campaignId, target);
+    const result = await this.repository.addTarget(campaignId, target);
     if (!result) {
       throw new Error(`Campaign ${campaignId} not found`);
     }
@@ -167,15 +167,15 @@ export class CampaignService {
     return { target: result };
   }
 
-  removeTarget(campaignId: string, targetId: string): boolean {
-    return this.repository.removeTarget(campaignId, targetId);
+  async removeTarget(campaignId: string, targetId: string): Promise<boolean> {
+    return await this.repository.removeTarget(campaignId, targetId);
   }
 
-  updateTarget(
+  async updateTarget(
     campaignId: string,
     targetId: string,
     updates: { videoTitle?: string; videoDescription?: string; tags?: string[]; privacy?: string; thumbnailAssetId?: string },
-  ): { target: CampaignTargetRecord } | { error: 'NOT_FOUND' } {
+  ): Promise<{ target: CampaignTargetRecord } | { error: 'NOT_FOUND' }> {
     const filtered: Partial<CampaignTargetRecord> = {};
     if (updates.videoTitle !== undefined) filtered.videoTitle = updates.videoTitle;
     if (updates.videoDescription !== undefined) filtered.videoDescription = updates.videoDescription;
@@ -184,13 +184,13 @@ export class CampaignService {
     if (updates.thumbnailAssetId !== undefined) filtered.thumbnailAssetId = updates.thumbnailAssetId;
     filtered.updatedAt = this.now().toISOString();
 
-    const target = this.repository.updateTarget(campaignId, targetId, filtered);
+    const target = await this.repository.updateTarget(campaignId, targetId, filtered);
     if (!target) return { error: 'NOT_FOUND' };
     return { target };
   }
 
-  listCampaigns(filters?: { status?: string; search?: string; limit?: number; offset?: number }): { campaigns: CampaignRecord[]; total: number; limit: number; offset: number } {
-    let campaigns = this.repository.findAllNewestFirst();
+  async listCampaigns(filters?: { status?: string; search?: string; limit?: number; offset?: number }): Promise<{ campaigns: CampaignRecord[]; total: number; limit: number; offset: number }> {
+    let campaigns = await this.repository.findAllNewestFirst();
 
     if (filters?.status) {
       campaigns = campaigns.filter((c) => c.status === filters.status);
@@ -209,14 +209,14 @@ export class CampaignService {
     return { campaigns, total, limit, offset };
   }
 
-  getCampaign(id: string): { campaign: CampaignRecord } | null {
-    const campaign = this.repository.findById(id);
+  async getCampaign(id: string): Promise<{ campaign: CampaignRecord } | null> {
+    const campaign = await this.repository.findById(id);
     if (!campaign) return null;
     return { campaign };
   }
 
-  cloneCampaign(id: string, options?: { title?: string }): { campaign: CampaignRecord } | { error: 'NOT_FOUND' } {
-    const original = this.repository.findById(id);
+  async cloneCampaign(id: string, options?: { title?: string }): Promise<{ campaign: CampaignRecord } | { error: 'NOT_FOUND' }> {
+    const original = await this.repository.findById(id);
     if (!original) return { error: 'NOT_FOUND' };
 
     const nowIso = this.now().toISOString();
@@ -248,21 +248,21 @@ export class CampaignService {
       updatedAt: nowIso,
     };
 
-    const created = this.repository.create(cloned);
+    const created = await this.repository.create(cloned);
     for (const target of clonedTargets) {
       target.campaignId = created.id;
-      this.repository.addTarget(created.id, target);
+      await this.repository.addTarget(created.id, target);
     }
 
-    return { campaign: this.repository.findById(created.id)! };
+    return { campaign: (await this.repository.findById(created.id))! };
   }
 
-  markReady(campaignId: string): { campaign: CampaignRecord } | { error: 'NO_TARGETS' | 'NOT_FOUND' } {
-    const campaign = this.repository.findById(campaignId);
+  async markReady(campaignId: string): Promise<{ campaign: CampaignRecord } | { error: 'NO_TARGETS' | 'NOT_FOUND' }> {
+    const campaign = await this.repository.findById(campaignId);
     if (!campaign) return { error: 'NOT_FOUND' };
     if (campaign.targets.length === 0) return { error: 'NO_TARGETS' };
 
-    const updated = this.repository.update(campaignId, {
+    const updated = await this.repository.update(campaignId, {
       status: 'ready',
       updatedAt: this.now().toISOString(),
     });
@@ -270,12 +270,12 @@ export class CampaignService {
     return { campaign: updated! };
   }
 
-  launch(campaignId: string): { campaign: CampaignRecord } | { error: 'NOT_FOUND' | 'NOT_READY' } {
-    const campaign = this.repository.findById(campaignId);
+  async launch(campaignId: string): Promise<{ campaign: CampaignRecord } | { error: 'NOT_FOUND' | 'NOT_READY' }> {
+    const campaign = await this.repository.findById(campaignId);
     if (!campaign) return { error: 'NOT_FOUND' };
     if (campaign.status !== 'ready') return { error: 'NOT_READY' };
 
-    const updated = this.repository.update(campaignId, {
+    const updated = await this.repository.update(campaignId, {
       status: 'launching',
       updatedAt: this.now().toISOString(),
     });
@@ -283,12 +283,12 @@ export class CampaignService {
     return { campaign: updated! };
   }
 
-  updateTargetStatus(
+  async updateTargetStatus(
     campaignId: string,
     targetId: string,
     status: CampaignTargetRecord['status'],
     extra?: { youtubeVideoId?: string; errorMessage?: string },
-  ): { target: CampaignTargetRecord } | null {
+  ): Promise<{ target: CampaignTargetRecord } | null> {
     const updates: Partial<CampaignTargetRecord> = {
       status,
       updatedAt: this.now().toISOString(),
@@ -297,16 +297,16 @@ export class CampaignService {
     if (extra?.youtubeVideoId) updates.youtubeVideoId = extra.youtubeVideoId;
     if (extra?.errorMessage) updates.errorMessage = extra.errorMessage;
 
-    const target = this.repository.updateTarget(campaignId, targetId, updates);
+    const target = await this.repository.updateTarget(campaignId, targetId, updates);
     if (!target) return null;
 
     // Check if all targets completed/failed to update campaign status
-    const campaign = this.repository.findById(campaignId);
+    const campaign = await this.repository.findById(campaignId);
     if (campaign) {
       const allDone = campaign.targets.every((t) => t.status === 'publicado' || t.status === 'erro');
       if (allDone) {
         const anySuccess = campaign.targets.some((t) => t.status === 'publicado');
-        this.repository.update(campaignId, {
+        await this.repository.update(campaignId, {
           status: anySuccess ? 'completed' : 'failed',
           updatedAt: this.now().toISOString(),
         });
@@ -316,19 +316,19 @@ export class CampaignService {
     return { target };
   }
 
-  deleteCampaign(campaignId: string): { deleted: boolean } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' } {
-    const campaign = this.repository.findById(campaignId);
+  async deleteCampaign(campaignId: string): Promise<{ deleted: boolean } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' }> {
+    const campaign = await this.repository.findById(campaignId);
     if (!campaign) return { error: 'NOT_FOUND' };
     if (campaign.status === 'launching') return { error: 'CAMPAIGN_ACTIVE' };
 
-    return { deleted: this.repository.delete(campaignId) };
+    return { deleted: await this.repository.delete(campaignId) };
   }
 
-  updateCampaign(
+  async updateCampaign(
     campaignId: string,
     updates: { title?: string; scheduledAt?: string },
-  ): { campaign: CampaignRecord } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' } {
-    const campaign = this.repository.findById(campaignId);
+  ): Promise<{ campaign: CampaignRecord } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' }> {
+    const campaign = await this.repository.findById(campaignId);
     if (!campaign) return { error: 'NOT_FOUND' };
     if (campaign.status === 'launching') return { error: 'CAMPAIGN_ACTIVE' };
 
@@ -336,7 +336,7 @@ export class CampaignService {
     if (updates.title) patch.title = updates.title;
     if (updates.scheduledAt !== undefined) patch.scheduledAt = updates.scheduledAt;
 
-    const updated = this.repository.update(campaignId, patch);
+    const updated = await this.repository.update(campaignId, patch);
     return { campaign: updated! };
   }
 }

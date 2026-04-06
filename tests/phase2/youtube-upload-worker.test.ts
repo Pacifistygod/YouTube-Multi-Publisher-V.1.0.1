@@ -9,18 +9,18 @@ import {
 import { PublishJobService, InMemoryPublishJobRepository } from '../../apps/api/src/campaigns/publish-job.service';
 import { CampaignService, InMemoryCampaignRepository } from '../../apps/api/src/campaigns/campaign.service';
 
-function createReadyTargetScenario() {
+async function createReadyTargetScenario() {
   const campaignRepo = new InMemoryCampaignRepository();
   const campaignService = new CampaignService({ repository: campaignRepo });
   const jobRepo = new InMemoryPublishJobRepository();
   const jobService = new PublishJobService({ repository: jobRepo });
 
-  const { campaign } = campaignService.createCampaign({
+  const { campaign } = await campaignService.createCampaign({
     title: 'Test Campaign',
     videoAssetId: 'asset-video-1',
   });
 
-  const { target } = campaignService.addTarget(campaign.id, {
+  const { target } = await campaignService.addTarget(campaign.id, {
     channelId: 'channel-1',
     videoTitle: 'My Video',
     videoDescription: 'Description here',
@@ -28,8 +28,8 @@ function createReadyTargetScenario() {
     privacy: 'public',
   });
 
-  campaignService.markReady(campaign.id);
-  campaignService.launch(campaign.id);
+  await campaignService.markReady(campaign.id);
+  await campaignService.launch(campaign.id);
 
   const [job] = jobService.enqueueForTargets([{ id: target.id, campaignId: campaign.id }]);
 
@@ -38,7 +38,7 @@ function createReadyTargetScenario() {
 
 describe('YouTube upload worker', () => {
   test('processes a queued job and uploads to YouTube', async () => {
-    const { jobService, campaignService, target, campaign } = createReadyTargetScenario();
+    const { jobService, campaignService, target, campaign } = await createReadyTargetScenario();
 
     const mockUpload: YouTubeUploadFn = vi.fn().mockResolvedValue({
       videoId: 'yt-uploaded-123',
@@ -71,7 +71,7 @@ describe('YouTube upload worker', () => {
   });
 
   test('marks job failed when YouTube upload throws', async () => {
-    const { jobService, campaignService } = createReadyTargetScenario();
+    const { jobService, campaignService } = await createReadyTargetScenario();
 
     const mockUpload: YouTubeUploadFn = vi.fn().mockRejectedValue(new Error('quotaExceeded'));
 
@@ -91,7 +91,7 @@ describe('YouTube upload worker', () => {
   });
 
   test('updates campaign target status to publicado on success', async () => {
-    const { jobService, campaignService, campaign, target } = createReadyTargetScenario();
+    const { jobService, campaignService, campaign, target } = await createReadyTargetScenario();
 
     const mockUpload: YouTubeUploadFn = vi.fn().mockResolvedValue({ videoId: 'yt-999' });
 
@@ -105,14 +105,14 @@ describe('YouTube upload worker', () => {
 
     await worker.processNext();
 
-    const updated = campaignService.getCampaign(campaign.id);
+    const updated = await campaignService.getCampaign(campaign.id);
     const targetRecord = updated!.campaign.targets.find((t) => t.id === target.id);
     expect(targetRecord!.status).toBe('publicado');
     expect(targetRecord!.youtubeVideoId).toBe('yt-999');
   });
 
   test('updates campaign target status to erro on failure', async () => {
-    const { jobService, campaignService, campaign, target } = createReadyTargetScenario();
+    const { jobService, campaignService, campaign, target } = await createReadyTargetScenario();
 
     const mockUpload: YouTubeUploadFn = vi.fn().mockRejectedValue(new Error('networkError'));
 
@@ -126,7 +126,7 @@ describe('YouTube upload worker', () => {
 
     await worker.processNext();
 
-    const updated = campaignService.getCampaign(campaign.id);
+    const updated = await campaignService.getCampaign(campaign.id);
     const targetRecord = updated!.campaign.targets.find((t) => t.id === target.id);
     expect(targetRecord!.status).toBe('erro');
   });
@@ -155,24 +155,24 @@ describe('YouTube upload worker', () => {
     const jobRepo = new InMemoryPublishJobRepository();
     const jobService = new PublishJobService({ repository: jobRepo });
 
-    const { campaign } = campaignService.createCampaign({
+    const { campaign } = await campaignService.createCampaign({
       title: 'Multi-target',
       videoAssetId: 'asset-1',
     });
 
-    const { target: t1 } = campaignService.addTarget(campaign.id, {
+    const { target: t1 } = await campaignService.addTarget(campaign.id, {
       channelId: 'ch-1',
       videoTitle: 'V1',
       videoDescription: 'D1',
     });
-    const { target: t2 } = campaignService.addTarget(campaign.id, {
+    const { target: t2 } = await campaignService.addTarget(campaign.id, {
       channelId: 'ch-2',
       videoTitle: 'V2',
       videoDescription: 'D2',
     });
 
-    campaignService.markReady(campaign.id);
-    campaignService.launch(campaign.id);
+    await campaignService.markReady(campaign.id);
+    await campaignService.launch(campaign.id);
 
     jobService.enqueueForTargets([
       { id: t1.id, campaignId: campaign.id },
@@ -196,7 +196,7 @@ describe('YouTube upload worker', () => {
     await worker.processNext();
     await worker.processNext();
 
-    const final = campaignService.getCampaign(campaign.id);
+    const final = await campaignService.getCampaign(campaign.id);
     expect(final!.campaign.status).toBe('completed');
   });
 });

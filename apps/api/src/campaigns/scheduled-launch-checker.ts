@@ -22,8 +22,8 @@ export class ScheduledLaunchChecker {
    * Checks all ready campaigns with a scheduledAt in the past and launches them.
    * Returns the IDs of campaigns that were launched.
    */
-  checkAndLaunch(): string[] {
-    const { campaigns } = this.campaignService.listCampaigns();
+  async checkAndLaunch(): Promise<string[]> {
+    const { campaigns } = await this.campaignService.listCampaigns();
     const nowMs = this.now().getTime();
     const launched: string[] = [];
 
@@ -34,7 +34,7 @@ export class ScheduledLaunchChecker {
       const scheduledMs = new Date(campaign.scheduledAt).getTime();
       if (scheduledMs > nowMs) continue;
 
-      const result = this.launchService.launchCampaign(campaign.id);
+      const result = await this.launchService.launchCampaign(campaign.id);
       if (!('error' in result)) {
         launched.push(campaign.id);
       }

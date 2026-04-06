@@ -41,8 +41,8 @@ export class DashboardService {
     this.jobService = options.jobService;
   }
 
-  getStats(): DashboardStats {
-    const { campaigns } = this.campaignService.listCampaigns();
+  async getStats(): Promise<DashboardStats> {
+    const { campaigns } = await this.campaignService.listCampaigns();
     const allJobs = this.jobService.getAllJobs();
 
     // Campaign breakdown

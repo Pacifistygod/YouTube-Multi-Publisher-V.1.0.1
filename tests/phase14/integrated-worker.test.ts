@@ -29,13 +29,13 @@ function buildTestDeps() {
   return { campaignService, jobService, launchService, uploadFn, channelTokenResolver, videoFileResolver };
 }
 
-function createCampaignWithTarget(campaignService: CampaignService) {
-  const { campaign } = campaignService.createCampaign({
+async function createCampaignWithTarget(campaignService: CampaignService) {
+  const { campaign } = await campaignService.createCampaign({
     title: 'Test Campaign',
     videoAssetId: 'asset-001',
   });
 
-  const { target } = campaignService.addTarget(campaign.id, {
+  const { target } = await campaignService.addTarget(campaign.id, {
     channelId: 'channel-001',
     videoTitle: 'My Video',
     videoDescription: 'Description here',
@@ -43,13 +43,13 @@ function createCampaignWithTarget(campaignService: CampaignService) {
     privacy: 'public',
   });
 
-  campaignService.markReady(campaign.id);
+  await campaignService.markReady(campaign.id);
 
-  return { campaign: campaignService.getCampaign(campaign.id)!.campaign, target };
+  return { campaign: (await campaignService.getCampaign(campaign.id))!.campaign, target };
 }
 
 describe('Integrated worker — createIntegratedWorker', () => {
-  test('returns worker and runner instances', () => {
+  test('returns worker and runner instances', async () => {
     const deps = buildTestDeps();
     const instance = createIntegratedWorker({
       campaignService: deps.campaignService,
@@ -66,10 +66,10 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
   test('processes a job using upload service token and file resolution', async () => {
     const deps = buildTestDeps();
-    const { campaign, target } = createCampaignWithTarget(deps.campaignService);
+    const { campaign, target } = await createCampaignWithTarget(deps.campaignService);
 
     // Launch the campaign to enqueue jobs
-    deps.launchService.launchCampaign(campaign.id);
+    await deps.launchService.launchCampaign(campaign.id);
 
     const instance = createIntegratedWorker({
       campaignService: deps.campaignService,
@@ -96,12 +96,12 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
   test('runner.processAll drains queue using integrated upload service', async () => {
     const deps = buildTestDeps();
-    const { campaign } = deps.campaignService.createCampaign({
+    const { campaign } = await deps.campaignService.createCampaign({
       title: 'Multi Target Campaign',
       videoAssetId: 'asset-001',
     });
 
-    deps.campaignService.addTarget(campaign.id, {
+    await deps.campaignService.addTarget(campaign.id, {
       channelId: 'channel-001',
       videoTitle: 'First Video',
       videoDescription: 'First description',
@@ -109,7 +109,7 @@ describe('Integrated worker — createIntegratedWorker', () => {
       privacy: 'public',
     });
 
-    deps.campaignService.addTarget(campaign.id, {
+    await deps.campaignService.addTarget(campaign.id, {
       channelId: 'channel-002',
       videoTitle: 'Second Video',
       videoDescription: 'Second description',
@@ -117,8 +117,8 @@ describe('Integrated worker — createIntegratedWorker', () => {
       privacy: 'unlisted',
     });
 
-    deps.campaignService.markReady(campaign.id);
-    deps.launchService.launchCampaign(campaign.id);
+    await deps.campaignService.markReady(campaign.id);
+    await deps.launchService.launchCampaign(campaign.id);
 
     const instance = createIntegratedWorker({
       campaignService: deps.campaignService,
@@ -137,9 +137,9 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
   test('handles upload failure through integrated service', async () => {
     const deps = buildTestDeps();
-    const { campaign } = createCampaignWithTarget(deps.campaignService);
+    const { campaign } = await createCampaignWithTarget(deps.campaignService);
 
-    deps.launchService.launchCampaign(campaign.id);
+    await deps.launchService.launchCampaign(campaign.id);
 
     (deps.uploadFn as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('YouTube API quota exceeded'));
 
@@ -160,9 +160,9 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
   test('handles token resolution failure', async () => {
     const deps = buildTestDeps();
-    const { campaign } = createCampaignWithTarget(deps.campaignService);
+    const { campaign } = await createCampaignWithTarget(deps.campaignService);
 
-    deps.launchService.launchCampaign(campaign.id);
+    await deps.launchService.launchCampaign(campaign.id);
 
     (deps.channelTokenResolver.resolve as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Error('Token expired and refresh failed'),
@@ -185,9 +185,9 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
   test('handles file resolution failure', async () => {
     const deps = buildTestDeps();
-    const { campaign } = createCampaignWithTarget(deps.campaignService);
+    const { campaign } = await createCampaignWithTarget(deps.campaignService);
 
-    deps.launchService.launchCampaign(campaign.id);
+    await deps.launchService.launchCampaign(campaign.id);
 
     (deps.videoFileResolver.resolve as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Error('Video file not found'),
@@ -210,9 +210,9 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
   test('updates campaign target status after successful upload', async () => {
     const deps = buildTestDeps();
-    const { campaign, target } = createCampaignWithTarget(deps.campaignService);
+    const { campaign, target } = await createCampaignWithTarget(deps.campaignService);
 
-    deps.launchService.launchCampaign(campaign.id);
+    await deps.launchService.launchCampaign(campaign.id);
 
     const instance = createIntegratedWorker({
       campaignService: deps.campaignService,
@@ -224,7 +224,7 @@ describe('Integrated worker — createIntegratedWorker', () => {
 
     await instance.runner.processAll();
 
-    const updated = deps.campaignService.getCampaign(campaign.id);
+    const updated = await deps.campaignService.getCampaign(campaign.id);
     const updatedTarget = updated!.campaign.targets.find(t => t.id === target.id);
     expect(updatedTarget!.status).toBe('publicado');
   });

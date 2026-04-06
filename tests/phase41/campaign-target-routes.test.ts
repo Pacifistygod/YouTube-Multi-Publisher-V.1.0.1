@@ -11,12 +11,12 @@ function setup() {
   return { campaignService, router, session };
 }
 
-function createCampaignWithTarget(campaignService: CampaignService) {
-  const { campaign } = campaignService.createCampaign({
+async function createCampaignWithTarget(campaignService: CampaignService) {
+  const { campaign } = await campaignService.createCampaign({
     title: 'Test Campaign',
     videoAssetId: 'asset-1',
   });
-  const { target } = campaignService.addTarget(campaign.id, {
+  const { target } = await campaignService.addTarget(campaign.id, {
     channelId: 'ch-1',
     videoTitle: 'Video Title',
     videoDescription: 'Description',
@@ -28,7 +28,7 @@ describe('Campaign Target Management Routes', () => {
   describe('DELETE /api/campaigns/:id/targets/:targetId', () => {
     it('removes a target and returns 200', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'DELETE',
@@ -40,13 +40,13 @@ describe('Campaign Target Management Routes', () => {
       expect(response.status).toBe(200);
 
       // Verify target is actually removed
-      const result = campaignService.getCampaign(campaign.id);
+      const result = await campaignService.getCampaign(campaign.id);
       expect(result!.campaign.targets).toHaveLength(0);
     });
 
     it('returns 404 for non-existent target', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign } = createCampaignWithTarget(campaignService);
+      const { campaign } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'DELETE',
@@ -60,7 +60,7 @@ describe('Campaign Target Management Routes', () => {
 
     it('returns 401 without session', async () => {
       const { campaignService, router } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'DELETE',
@@ -76,7 +76,7 @@ describe('Campaign Target Management Routes', () => {
   describe('PATCH /api/campaigns/:id/targets/:targetId', () => {
     it('updates videoTitle and returns updated target', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'PATCH',
@@ -93,7 +93,7 @@ describe('Campaign Target Management Routes', () => {
 
     it('updates videoDescription', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'PATCH',
@@ -109,7 +109,7 @@ describe('Campaign Target Management Routes', () => {
 
     it('updates tags and privacy', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'PATCH',
@@ -126,7 +126,7 @@ describe('Campaign Target Management Routes', () => {
 
     it('updates thumbnailAssetId', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'PATCH',
@@ -142,7 +142,7 @@ describe('Campaign Target Management Routes', () => {
 
     it('returns 404 for non-existent target', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign } = createCampaignWithTarget(campaignService);
+      const { campaign } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'PATCH',
@@ -157,7 +157,7 @@ describe('Campaign Target Management Routes', () => {
 
     it('returns 401 without session', async () => {
       const { campaignService, router } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'PATCH',
@@ -172,7 +172,7 @@ describe('Campaign Target Management Routes', () => {
 
     it('returns 400 when body is empty', async () => {
       const { campaignService, router, session } = setup();
-      const { campaign, target } = createCampaignWithTarget(campaignService);
+      const { campaign, target } = await createCampaignWithTarget(campaignService);
 
       const request: ApiRequest = {
         method: 'PATCH',

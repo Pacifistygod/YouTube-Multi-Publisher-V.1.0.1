@@ -12,19 +12,19 @@ function setup() {
   return { campaignService, router };
 }
 
-function seedCampaigns(campaignService: ReturnType<typeof setup>['campaignService']) {
-  const c1 = campaignService.createCampaign({ title: 'Alpha Video', videoAssetId: 'v-1' }).campaign;
-  const c2 = campaignService.createCampaign({ title: 'Beta Launch', videoAssetId: 'v-2' }).campaign;
-  const c3 = campaignService.createCampaign({ title: 'Gamma Release', videoAssetId: 'v-3' }).campaign;
+async function seedCampaigns(campaignService: ReturnType<typeof setup>['campaignService']) {
+  const c1 = (await campaignService.createCampaign({ title: 'Alpha Video', videoAssetId: 'v-1' })).campaign;
+  const c2 = (await campaignService.createCampaign({ title: 'Beta Launch', videoAssetId: 'v-2' })).campaign;
+  const c3 = (await campaignService.createCampaign({ title: 'Gamma Release', videoAssetId: 'v-3' })).campaign;
 
   // Make c2 ready
-  campaignService.addTarget(c2.id, { channelId: 'ch-1', videoTitle: 'T', videoDescription: 'D' });
-  campaignService.markReady(c2.id);
+  await campaignService.addTarget(c2.id, { channelId: 'ch-1', videoTitle: 'T', videoDescription: 'D' });
+  await campaignService.markReady(c2.id);
 
   // Make c3 completed by launching and completing targets
-  campaignService.addTarget(c3.id, { channelId: 'ch-2', videoTitle: 'T', videoDescription: 'D' });
-  campaignService.markReady(c3.id);
-  campaignService.launch(c3.id);
+  await campaignService.addTarget(c3.id, { channelId: 'ch-2', videoTitle: 'T', videoDescription: 'D' });
+  await campaignService.markReady(c3.id);
+  await campaignService.launch(c3.id);
 
   return { c1, c2, c3 };
 }
@@ -33,7 +33,7 @@ describe('Campaign List Filtering', () => {
   describe('GET /api/campaigns?status=', () => {
     it('filters by draft status', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -50,7 +50,7 @@ describe('Campaign List Filtering', () => {
 
     it('filters by ready status', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -67,7 +67,7 @@ describe('Campaign List Filtering', () => {
 
     it('filters by launching status', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -86,7 +86,7 @@ describe('Campaign List Filtering', () => {
   describe('GET /api/campaigns?search=', () => {
     it('filters by title substring (case-insensitive)', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -103,7 +103,7 @@ describe('Campaign List Filtering', () => {
 
     it('returns empty array when no match', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -121,7 +121,7 @@ describe('Campaign List Filtering', () => {
   describe('combined filters', () => {
     it('combines status and search filters', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -137,7 +137,7 @@ describe('Campaign List Filtering', () => {
 
     it('returns empty when status matches but search does not', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',
@@ -155,7 +155,7 @@ describe('Campaign List Filtering', () => {
   describe('no filters', () => {
     it('returns all campaigns when no query params', async () => {
       const { campaignService, router } = setup();
-      seedCampaigns(campaignService);
+      await seedCampaigns(campaignService);
 
       const request: ApiRequest = {
         method: 'GET',

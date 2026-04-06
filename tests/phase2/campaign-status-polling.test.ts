@@ -4,31 +4,31 @@ import { CampaignService, InMemoryCampaignRepository } from '../../apps/api/src/
 import { PublishJobService, InMemoryPublishJobRepository } from '../../apps/api/src/campaigns/publish-job.service';
 import { CampaignStatusService } from '../../apps/api/src/campaigns/campaign-status.service';
 
-function setupWithLaunchedCampaign() {
+async function setupWithLaunchedCampaign() {
   const campaignRepo = new InMemoryCampaignRepository();
   const campaignService = new CampaignService({ repository: campaignRepo });
   const jobRepo = new InMemoryPublishJobRepository();
   const jobService = new PublishJobService({ repository: jobRepo });
 
-  const { campaign } = campaignService.createCampaign({
+  const { campaign } = await campaignService.createCampaign({
     title: 'Polling Test',
     videoAssetId: 'asset-1',
   });
 
-  const { target: t1 } = campaignService.addTarget(campaign.id, {
+  const { target: t1 } = await campaignService.addTarget(campaign.id, {
     channelId: 'ch-1',
     videoTitle: 'V1',
     videoDescription: 'D1',
   });
 
-  const { target: t2 } = campaignService.addTarget(campaign.id, {
+  const { target: t2 } = await campaignService.addTarget(campaign.id, {
     channelId: 'ch-2',
     videoTitle: 'V2',
     videoDescription: 'D2',
   });
 
-  campaignService.markReady(campaign.id);
-  campaignService.launch(campaign.id);
+  await campaignService.markReady(campaign.id);
+  await campaignService.launch(campaign.id);
 
   const jobs = jobService.enqueueForTargets([
     { id: t1.id, campaignId: campaign.id },
@@ -39,11 +39,11 @@ function setupWithLaunchedCampaign() {
 }
 
 describe('campaign status polling', () => {
-  test('returns current campaign status with per-target details', () => {
-    const { campaignService, jobService, campaign } = setupWithLaunchedCampaign();
+  test('returns current campaign status with per-target details', async () => {
+    const { campaignService, jobService, campaign } = await setupWithLaunchedCampaign();
     const statusService = new CampaignStatusService({ campaignService, jobService });
 
-    const result = statusService.getStatus(campaign.id);
+    const result = await statusService.getStatus(campaign.id);
 
     expect(result).not.toBeNull();
     expect(result!.campaignStatus).toBe('launching');
@@ -52,16 +52,16 @@ describe('campaign status polling', () => {
     expect(result!.targets[0].latestJobStatus).toBe('queued');
   });
 
-  test('reflects target status updates from job completion', () => {
-    const { campaignService, jobService, campaign, t1, jobs } = setupWithLaunchedCampaign();
+  test('reflects target status updates from job completion', async () => {
+    const { campaignService, jobService, campaign, t1, jobs } = await setupWithLaunchedCampaign();
     const statusService = new CampaignStatusService({ campaignService, jobService });
 
     // Simulate job processing & completion
     jobService.pickNext();
     jobService.markCompleted(jobs[0].id, 'yt-abc');
-    campaignService.updateTargetStatus(campaign.id, t1.id, 'publicado', { youtubeVideoId: 'yt-abc' });
+    await campaignService.updateTargetStatus(campaign.id, t1.id, 'publicado', { youtubeVideoId: 'yt-abc' });
 
-    const result = statusService.getStatus(campaign.id);
+    const result = await statusService.getStatus(campaign.id);
 
     const t1Status = result!.targets.find((t) => t.targetId === t1.id);
     expect(t1Status!.status).toBe('publicado');
@@ -69,46 +69,46 @@ describe('campaign status polling', () => {
     expect(t1Status!.latestJobStatus).toBe('completed');
   });
 
-  test('indicates whether polling should continue', () => {
-    const { campaignService, jobService, campaign, t1, t2, jobs } = setupWithLaunchedCampaign();
+  test('indicates whether polling should continue', async () => {
+    const { campaignService, jobService, campaign, t1, t2, jobs } = await setupWithLaunchedCampaign();
     const statusService = new CampaignStatusService({ campaignService, jobService });
 
     // Nothing done yet — should keep polling
-    let result = statusService.getStatus(campaign.id);
+    let result = await statusService.getStatus(campaign.id);
     expect(result!.shouldPoll).toBe(true);
 
     // Complete all targets
     jobService.pickNext();
     jobService.markCompleted(jobs[0].id, 'yt-1');
-    campaignService.updateTargetStatus(campaign.id, t1.id, 'publicado', { youtubeVideoId: 'yt-1' });
+    await campaignService.updateTargetStatus(campaign.id, t1.id, 'publicado', { youtubeVideoId: 'yt-1' });
 
     jobService.pickNext();
     jobService.markCompleted(jobs[1].id, 'yt-2');
-    campaignService.updateTargetStatus(campaign.id, t2.id, 'publicado', { youtubeVideoId: 'yt-2' });
+    await campaignService.updateTargetStatus(campaign.id, t2.id, 'publicado', { youtubeVideoId: 'yt-2' });
 
-    result = statusService.getStatus(campaign.id);
+    result = await statusService.getStatus(campaign.id);
     expect(result!.shouldPoll).toBe(false);
     expect(result!.campaignStatus).toBe('completed');
   });
 
-  test('returns null for non-existent campaign', () => {
+  test('returns null for non-existent campaign', async () => {
     const campaignService = new CampaignService();
     const jobService = new PublishJobService();
     const statusService = new CampaignStatusService({ campaignService, jobService });
 
-    const result = statusService.getStatus('nonexistent');
+    const result = await statusService.getStatus('nonexistent');
     expect(result).toBeNull();
   });
 
-  test('includes progress counts', () => {
-    const { campaignService, jobService, campaign, t1, jobs } = setupWithLaunchedCampaign();
+  test('includes progress counts', async () => {
+    const { campaignService, jobService, campaign, t1, jobs } = await setupWithLaunchedCampaign();
     const statusService = new CampaignStatusService({ campaignService, jobService });
 
     jobService.pickNext();
     jobService.markCompleted(jobs[0].id, 'yt-1');
-    campaignService.updateTargetStatus(campaign.id, t1.id, 'publicado', { youtubeVideoId: 'yt-1' });
+    await campaignService.updateTargetStatus(campaign.id, t1.id, 'publicado', { youtubeVideoId: 'yt-1' });
 
-    const result = statusService.getStatus(campaign.id);
+    const result = await statusService.getStatus(campaign.id);
     expect(result!.progress).toMatchObject({
       completed: 1,
       failed: 0,

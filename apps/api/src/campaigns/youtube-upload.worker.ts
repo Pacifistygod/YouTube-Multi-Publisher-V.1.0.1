@@ -44,13 +44,13 @@ export class YouTubeUploadWorker {
     if (!job) return null;
 
     // Find the target for this job
-    const target = this.findTargetForJob(job);
+    const target = await this.findTargetForJob(job);
     if (!target) {
       return this.jobService.markFailed(job.id, 'Target not found');
     }
 
     // Find the campaign to get videoAssetId
-    const campaignResult = this.campaignService.getCampaign(target.campaignId);
+    const campaignResult = await this.campaignService.getCampaign(target.campaignId);
     if (!campaignResult) {
       return this.jobService.markFailed(job.id, 'Campaign not found');
     }
@@ -72,7 +72,7 @@ export class YouTubeUploadWorker {
       const completedJob = this.jobService.markCompleted(job.id, result.videoId);
 
       // Update target status
-      this.campaignService.updateTargetStatus(target.campaignId, target.id, 'publicado', {
+      await this.campaignService.updateTargetStatus(target.campaignId, target.id, 'publicado', {
         youtubeVideoId: result.videoId,
       });
 
@@ -84,7 +84,7 @@ export class YouTubeUploadWorker {
       const failedJob = this.jobService.markFailed(job.id, errorMessage);
 
       // Update target status
-      this.campaignService.updateTargetStatus(target.campaignId, target.id, 'erro', {
+      await this.campaignService.updateTargetStatus(target.campaignId, target.id, 'erro', {
         errorMessage,
       });
 
@@ -92,9 +92,9 @@ export class YouTubeUploadWorker {
     }
   }
 
-  private findTargetForJob(job: PublishJobRecord): CampaignTargetRecord | null {
+  private async findTargetForJob(job: PublishJobRecord): Promise<CampaignTargetRecord | null> {
     // Search all campaigns for the target matching this job
-    const { campaigns } = this.campaignService.listCampaigns();
+    const { campaigns } = await this.campaignService.listCampaigns();
     for (const campaign of campaigns) {
       const target = campaign.targets.find((t) => t.id === job.campaignTargetId);
       if (target) return target;

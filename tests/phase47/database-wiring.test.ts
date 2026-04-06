@@ -5,18 +5,18 @@ import { bootstrap } from '../../apps/api/src/bootstrap';
 import { InMemoryCampaignRepository } from '../../apps/api/src/campaigns/campaign.service';
 
 describe('Database Provider', () => {
-  it('creates a provider from DATABASE_URL', () => {
+  it('creates a provider from DATABASE_URL', async () => {
     const provider = createDatabaseProvider({ databaseUrl: 'postgresql://localhost:5432/test' });
     expect(provider).toBeDefined();
     expect(provider.isConnected()).toBe(false);
   });
 
-  it('returns null repository when no DATABASE_URL', () => {
+  it('returns null repository when no DATABASE_URL', async () => {
     const provider = createDatabaseProvider({});
     expect(provider.campaignRepository).toBeNull();
   });
 
-  it('exposes a campaign repository when DATABASE_URL is set', () => {
+  it('exposes a campaign repository when DATABASE_URL is set', async () => {
     const provider = createDatabaseProvider({ databaseUrl: 'postgresql://localhost:5432/test' });
     expect(provider.campaignRepository).toBeDefined();
   });
@@ -49,21 +49,21 @@ describe('Database Provider', () => {
 });
 
 describe('App with repository injection', () => {
-  it('uses injected repository in campaigns module', () => {
+  it('uses injected repository in campaigns module', async () => {
     const repository = new InMemoryCampaignRepository();
     const app = createApp({ campaignsModuleOptions: { repository } });
 
     // Create via the app's campaignService, verify it uses our repo
-    app.campaignsModule.campaignService.createCampaign({ title: 'Test', videoAssetId: 'v-1' });
+    await app.campaignsModule.campaignService.createCampaign({ title: 'Test', videoAssetId: 'v-1' });
     const result = repository.findAllNewestFirst();
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe('Test');
   });
 
-  it('defaults to in-memory when no repository provided', () => {
+  it('defaults to in-memory when no repository provided', async () => {
     const app = createApp();
-    app.campaignsModule.campaignService.createCampaign({ title: 'Default', videoAssetId: 'v-1' });
-    const { campaigns } = app.campaignsModule.campaignService.listCampaigns();
+    await app.campaignsModule.campaignService.createCampaign({ title: 'Default', videoAssetId: 'v-1' });
+    const { campaigns } = await app.campaignsModule.campaignService.listCampaigns();
     expect(campaigns).toHaveLength(1);
   });
 });
@@ -80,12 +80,12 @@ const baseEnv = {
 };
 
 describe('Bootstrap database wiring', () => {
-  it('returns databaseProvider in bootstrap result', () => {
+  it('returns databaseProvider in bootstrap result', async () => {
     const result = bootstrap({ env: baseEnv });
     expect(result.databaseProvider).toBeDefined();
   });
 
-  it('creates database provider when DATABASE_URL is set', () => {
+  it('creates database provider when DATABASE_URL is set', async () => {
     const result = bootstrap({ env: baseEnv });
     expect(result.databaseProvider.campaignRepository).toBeDefined();
   });

@@ -7,12 +7,12 @@ describe('dashboard controller endpoint', () => {
     const mod = createCampaignsModule();
 
     // Seed data
-    const { campaign } = mod.campaignService.createCampaign({ title: 'D1', videoAssetId: 'a1' });
-    const { target } = mod.campaignService.addTarget(campaign.id, {
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'D1', videoAssetId: 'a1' });
+    const { target } = await mod.campaignService.addTarget(campaign.id, {
       channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D',
     });
-    mod.campaignService.markReady(campaign.id);
-    mod.launchService.launchCampaign(campaign.id);
+    await mod.campaignService.markReady(campaign.id);
+    await mod.launchService.launchCampaign(campaign.id);
 
     const request = {
       session: { adminUser: { email: 'admin@test.com' } },

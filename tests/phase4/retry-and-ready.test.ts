@@ -37,16 +37,16 @@ describe('controller retryTarget endpoint', () => {
     const { controller, campaignService, jobService } = createFullStack();
 
     // Setup: create, add target, launch, fail the job
-    const { campaign } = campaignService.createCampaign({ title: 'Retry', videoAssetId: 'a1' });
-    const { target } = campaignService.addTarget(campaign.id, {
+    const { campaign } = await campaignService.createCampaign({ title: 'Retry', videoAssetId: 'a1' });
+    const { target } = await campaignService.addTarget(campaign.id, {
       channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D',
     });
-    campaignService.markReady(campaign.id);
-    campaignService.launch(campaign.id);
+    await campaignService.markReady(campaign.id);
+    await campaignService.launch(campaign.id);
     const [job] = jobService.enqueueForTargets([{ id: target.id, campaignId: campaign.id }]);
     jobService.pickNext(); // processing
     jobService.markFailed(job.id, 'quotaExceeded');
-    campaignService.updateTargetStatus(campaign.id, target.id, 'erro', { errorMessage: 'quotaExceeded' });
+    await campaignService.updateTargetStatus(campaign.id, target.id, 'erro', { errorMessage: 'quotaExceeded' });
 
     const response = await controller.retryTarget(authRequest({
       params: { id: campaign.id, targetId: target.id },
@@ -60,12 +60,12 @@ describe('controller retryTarget endpoint', () => {
   test('retry returns 400 when max attempts reached', async () => {
     const { controller, campaignService, jobService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'MaxRetry', videoAssetId: 'a1' });
-    const { target } = campaignService.addTarget(campaign.id, {
+    const { campaign } = await campaignService.createCampaign({ title: 'MaxRetry', videoAssetId: 'a1' });
+    const { target } = await campaignService.addTarget(campaign.id, {
       channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D',
     });
-    campaignService.markReady(campaign.id);
-    campaignService.launch(campaign.id);
+    await campaignService.markReady(campaign.id);
+    await campaignService.launch(campaign.id);
     const [job] = jobService.enqueueForTargets([{ id: target.id, campaignId: campaign.id }]);
 
     // Exhaust all 3 attempts
@@ -86,7 +86,7 @@ describe('controller retryTarget endpoint', () => {
   test('retry returns 404 for nonexistent target', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'NoTarget', videoAssetId: 'a1' });
+    const { campaign } = await campaignService.createCampaign({ title: 'NoTarget', videoAssetId: 'a1' });
 
     const response = await controller.retryTarget(authRequest({
       params: { id: campaign.id, targetId: 'nope' },
@@ -100,8 +100,8 @@ describe('controller markReady endpoint', () => {
   test('POST /campaigns/:id/ready transitions draft to ready', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'ReadyUp', videoAssetId: 'a1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    const { campaign } = await campaignService.createCampaign({ title: 'ReadyUp', videoAssetId: 'a1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
 
     const response = await controller.markReady(authRequest({
       params: { id: campaign.id },
@@ -114,7 +114,7 @@ describe('controller markReady endpoint', () => {
   test('markReady rejects campaign without targets', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Empty', videoAssetId: 'a1' });
+    const { campaign } = await campaignService.createCampaign({ title: 'Empty', videoAssetId: 'a1' });
 
     const response = await controller.markReady(authRequest({
       params: { id: campaign.id },

@@ -39,8 +39,8 @@ export class CampaignStatusService {
     this.jobService = options.jobService;
   }
 
-  getStatus(campaignId: string): CampaignStatusResult | null {
-    const result = this.campaignService.getCampaign(campaignId);
+  async getStatus(campaignId: string): Promise<CampaignStatusResult | null> {
+    const result = await this.campaignService.getCampaign(campaignId);
     if (!result) return null;
 
     const { campaign } = result;

@@ -34,11 +34,11 @@ describe('JobRunner processes all queued jobs', () => {
   test('processAll drains the queue and returns results', async () => {
     const { campaignService, launchService, runner } = createE2EStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Runner', videoAssetId: 'a1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
-    campaignService.markReady(campaign.id);
-    launchService.launchCampaign(campaign.id);
+    const { campaign } = await campaignService.createCampaign({ title: 'Runner', videoAssetId: 'a1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
+    await campaignService.markReady(campaign.id);
+    await launchService.launchCampaign(campaign.id);
 
     const results = await runner.processAll();
 
@@ -61,11 +61,11 @@ describe('JobRunner processes all queued jobs', () => {
       return { videoId: `yt-${callCount}` };
     });
 
-    const { campaign } = campaignService.createCampaign({ title: 'Mixed', videoAssetId: 'a1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
-    campaignService.markReady(campaign.id);
-    launchService.launchCampaign(campaign.id);
+    const { campaign } = await campaignService.createCampaign({ title: 'Mixed', videoAssetId: 'a1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
+    await campaignService.markReady(campaign.id);
+    await launchService.launchCampaign(campaign.id);
 
     const results = await runner.processAll();
 
@@ -82,24 +82,24 @@ describe('E2E: full publish flow', () => {
     const { campaignService, launchService, runner } = createE2EStack();
 
     // 1. Create campaign
-    const { campaign } = campaignService.createCampaign({ title: 'Full Flow', videoAssetId: 'asset-1' });
+    const { campaign } = await campaignService.createCampaign({ title: 'Full Flow', videoAssetId: 'asset-1' });
     expect(campaign.status).toBe('draft');
 
     // 2. Add targets
-    campaignService.addTarget(campaign.id, {
+    await campaignService.addTarget(campaign.id, {
       channelId: 'ch-main', videoTitle: 'Main Upload', videoDescription: 'Main desc',
       tags: ['test'], privacy: 'public',
     });
-    campaignService.addTarget(campaign.id, {
+    await campaignService.addTarget(campaign.id, {
       channelId: 'ch-backup', videoTitle: 'Backup Upload', videoDescription: 'Backup desc',
     });
 
     // 3. Mark ready
-    const readyResult = campaignService.markReady(campaign.id);
+    const readyResult = await campaignService.markReady(campaign.id);
     expect('campaign' in readyResult && readyResult.campaign.status).toBe('ready');
 
     // 4. Launch (enqueues jobs)
-    const launchResult = launchService.launchCampaign(campaign.id);
+    const launchResult = await launchService.launchCampaign(campaign.id);
     expect('campaign' in launchResult && launchResult.campaign.status).toBe('launching');
 
     // 5. Process all jobs
@@ -108,7 +108,7 @@ describe('E2E: full publish flow', () => {
     expect(results.every((r) => r.status === 'completed')).toBe(true);
 
     // 6. Verify campaign completed
-    const final = campaignService.getCampaign(campaign.id);
+    const final = await campaignService.getCampaign(campaign.id);
     expect(final!.campaign.status).toBe('completed');
 
     // 7. Verify targets have YouTube video IDs
@@ -128,16 +128,16 @@ describe('E2E: full publish flow', () => {
     });
 
     // Setup and launch
-    const { campaign } = campaignService.createCampaign({ title: 'Retry Flow', videoAssetId: 'asset-1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
-    campaignService.markReady(campaign.id);
-    launchService.launchCampaign(campaign.id);
+    const { campaign } = await campaignService.createCampaign({ title: 'Retry Flow', videoAssetId: 'asset-1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
+    await campaignService.markReady(campaign.id);
+    await launchService.launchCampaign(campaign.id);
 
     // First pass — one succeeds, one fails
     await runner.processAll();
 
-    const afterFirst = campaignService.getCampaign(campaign.id)!;
+    const afterFirst = await campaignService.getCampaign(campaign.id)!;
     // Campaign completes because all targets reached terminal status (1 publicado + 1 erro)
     expect(afterFirst.campaign.status).toBe('completed');
     const failedTarget = afterFirst.campaign.targets.find((t) => t.status === 'erro')!;
@@ -148,12 +148,12 @@ describe('E2E: full publish flow', () => {
     const failedJobs = jobService.getJobsForTarget(failedTarget.id);
     const failedJob = failedJobs.find((j) => j.status === 'failed')!;
     jobService.retry(failedJob.id);
-    campaignService.updateTargetStatus(campaign.id, failedTarget.id, 'aguardando', { errorMessage: null });
+    await campaignService.updateTargetStatus(campaign.id, failedTarget.id, 'aguardando', { errorMessage: null });
 
     // Second pass — retry succeeds
     await runner.processAll();
 
-    const final = campaignService.getCampaign(campaign.id)!;
+    const final = await campaignService.getCampaign(campaign.id)!;
     expect(final.campaign.targets.every((t) => t.status === 'publicado')).toBe(true);
     expect(final.campaign.status).toBe('completed');
   });
@@ -170,23 +170,23 @@ describe('E2E: full publish flow', () => {
     });
 
     // Create scheduled campaign
-    const { campaign } = campaignService.createCampaign({
+    const { campaign } = await campaignService.createCampaign({
       title: 'Scheduled E2E',
       videoAssetId: 'a1',
       scheduledAt: '2026-04-10T15:00:00Z',
     });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
-    campaignService.markReady(campaign.id);
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
+    await campaignService.markReady(campaign.id);
 
     // Checker auto-launches
-    const launched = checker.checkAndLaunch();
+    const launched = await checker.checkAndLaunch();
     expect(launched).toHaveLength(1);
 
     // Process jobs
     await runner.processAll();
 
     // Verify completed
-    const final = campaignService.getCampaign(campaign.id)!;
+    const final = await campaignService.getCampaign(campaign.id)!;
     expect(final.campaign.status).toBe('completed');
     expect(final.campaign.targets[0].status).toBe('publicado');
   });

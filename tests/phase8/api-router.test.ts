@@ -45,7 +45,7 @@ describe('API router dispatches campaign routes', () => {
 
   test('GET /api/campaigns lists campaigns', async () => {
     const mod = createCampaignsModule();
-    mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
+    await mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
 
     const router = createApiRouter({ campaignsModule: mod });
     const res = await router.handle(authenticatedRequest({
@@ -59,7 +59,7 @@ describe('API router dispatches campaign routes', () => {
 
   test('GET /api/campaigns/:id returns a campaign', async () => {
     const mod = createCampaignsModule();
-    const { campaign } = mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
 
     const router = createApiRouter({ campaignsModule: mod });
     const res = await router.handle(authenticatedRequest({
@@ -73,7 +73,7 @@ describe('API router dispatches campaign routes', () => {
 
   test('DELETE /api/campaigns/:id deletes a campaign', async () => {
     const mod = createCampaignsModule();
-    const { campaign } = mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
 
     const router = createApiRouter({ campaignsModule: mod });
     const res = await router.handle(authenticatedRequest({
@@ -92,11 +92,11 @@ describe('API router dispatches campaign routes', () => {
 
   test('POST /api/campaigns/:id/launch launches a ready campaign', async () => {
     const mod = createCampaignsModule();
-    const { campaign } = mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
-    mod.campaignService.addTarget(campaign.id, {
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
+    await mod.campaignService.addTarget(campaign.id, {
       channelId: 'ch1', videoTitle: 'V', videoDescription: 'D',
     });
-    mod.campaignService.markReady(campaign.id);
+    await mod.campaignService.markReady(campaign.id);
 
     const router = createApiRouter({ campaignsModule: mod });
     const res = await router.handle(authenticatedRequest({
@@ -110,12 +110,12 @@ describe('API router dispatches campaign routes', () => {
 
   test('GET /api/campaigns/:id/status returns campaign status', async () => {
     const mod = createCampaignsModule();
-    const { campaign } = mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
-    mod.campaignService.addTarget(campaign.id, {
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
+    await mod.campaignService.addTarget(campaign.id, {
       channelId: 'ch1', videoTitle: 'V', videoDescription: 'D',
     });
-    mod.campaignService.markReady(campaign.id);
-    mod.launchService.launchCampaign(campaign.id);
+    await mod.campaignService.markReady(campaign.id);
+    await mod.launchService.launchCampaign(campaign.id);
 
     const router = createApiRouter({ campaignsModule: mod });
     const res = await router.handle(authenticatedRequest({
@@ -130,7 +130,7 @@ describe('API router dispatches campaign routes', () => {
 
   test('GET /api/dashboard returns dashboard stats', async () => {
     const mod = createCampaignsModule();
-    mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
+    await mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
 
     const router = createApiRouter({ campaignsModule: mod });
     const res = await router.handle(authenticatedRequest({
@@ -144,12 +144,12 @@ describe('API router dispatches campaign routes', () => {
 
   test('POST /api/campaigns/:id/targets/:targetId/retry retries a failed target', async () => {
     const mod = createCampaignsModule();
-    const { campaign } = mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
-    const { target } = mod.campaignService.addTarget(campaign.id, {
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'C1', videoAssetId: 'v1' });
+    const { target } = await mod.campaignService.addTarget(campaign.id, {
       channelId: 'ch1', videoTitle: 'V', videoDescription: 'D',
     });
-    mod.campaignService.markReady(campaign.id);
-    mod.launchService.launchCampaign(campaign.id);
+    await mod.campaignService.markReady(campaign.id);
+    await mod.launchService.launchCampaign(campaign.id);
     // Fail the job
     const jobs = mod.jobService.getJobsForTarget(target.id);
     mod.jobService.pickNext(); // transitions to processing

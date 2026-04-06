@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { createCampaignsModule } from '../../apps/api/src/campaigns/campaigns.module';
 
 describe('campaigns module wires all services', () => {
-  test('module instance exposes all services', () => {
+  test('module instance exposes all services', async () => {
     const mod = createCampaignsModule();
 
     expect(mod.campaignService).toBeDefined();
@@ -17,9 +17,9 @@ describe('campaigns module wires all services', () => {
   test('controller launch uses LaunchService (enqueues jobs)', async () => {
     const mod = createCampaignsModule();
 
-    const { campaign } = mod.campaignService.createCampaign({ title: 'Wire Test', videoAssetId: 'a1' });
-    mod.campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    mod.campaignService.markReady(campaign.id);
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'Wire Test', videoAssetId: 'a1' });
+    await mod.campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await mod.campaignService.markReady(campaign.id);
 
     const request = {
       session: { adminUser: { email: 'admin@test.com' } },
@@ -39,10 +39,10 @@ describe('campaigns module wires all services', () => {
   test('controller getStatus returns live data', async () => {
     const mod = createCampaignsModule();
 
-    const { campaign } = mod.campaignService.createCampaign({ title: 'Status Wire', videoAssetId: 'a1' });
-    mod.campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    mod.campaignService.markReady(campaign.id);
-    mod.campaignService.launch(campaign.id);
+    const { campaign } = await mod.campaignService.createCampaign({ title: 'Status Wire', videoAssetId: 'a1' });
+    await mod.campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await mod.campaignService.markReady(campaign.id);
+    await mod.campaignService.launch(campaign.id);
 
     const request = {
       session: { adminUser: { email: 'admin@test.com' } },

@@ -79,8 +79,8 @@ describe('campaigns controller', () => {
     const service = new CampaignService({ repository });
     const controller = new CampaignsController(service, new SessionGuard());
 
-    service.createCampaign({ title: 'First', videoAssetId: 'a1' });
-    service.createCampaign({ title: 'Second', videoAssetId: 'a2' });
+    await service.createCampaign({ title: 'First', videoAssetId: 'a1' });
+    await service.createCampaign({ title: 'Second', videoAssetId: 'a2' });
 
     const response = await controller.list(createAuthenticatedRequest());
 
@@ -94,7 +94,7 @@ describe('campaigns controller', () => {
     const service = new CampaignService({ repository });
     const controller = new CampaignsController(service, new SessionGuard());
 
-    const { campaign } = service.createCampaign({ title: 'Detail', videoAssetId: 'a1' });
+    const { campaign } = await service.createCampaign({ title: 'Detail', videoAssetId: 'a1' });
 
     const response = await controller.getById({
       ...createAuthenticatedRequest(),
@@ -123,7 +123,7 @@ describe('campaigns controller', () => {
     const service = new CampaignService({ repository });
     const controller = new CampaignsController(service, new SessionGuard());
 
-    const { campaign } = service.createCampaign({ title: 'Camp', videoAssetId: 'a1' });
+    const { campaign } = await service.createCampaign({ title: 'Camp', videoAssetId: 'a1' });
 
     const response = await controller.addTarget({
       ...createAuthenticatedRequest(),
@@ -144,13 +144,13 @@ describe('campaigns controller', () => {
     const service = new CampaignService({ repository });
     const controller = new CampaignsController(service, new SessionGuard());
 
-    const { campaign } = service.createCampaign({ title: 'Camp', videoAssetId: 'a1' });
-    service.addTarget(campaign.id, {
+    const { campaign } = await service.createCampaign({ title: 'Camp', videoAssetId: 'a1' });
+    await service.addTarget(campaign.id, {
       channelId: 'ch-1',
       videoTitle: 'T',
       videoDescription: 'D',
     });
-    service.markReady(campaign.id);
+    await service.markReady(campaign.id);
 
     const response = await controller.launch({
       ...createAuthenticatedRequest(),
@@ -166,7 +166,7 @@ describe('campaigns controller', () => {
     const service = new CampaignService({ repository });
     const controller = new CampaignsController(service, new SessionGuard());
 
-    const { campaign } = service.createCampaign({ title: 'Camp', videoAssetId: 'a1' });
+    const { campaign } = await service.createCampaign({ title: 'Camp', videoAssetId: 'a1' });
 
     const response = await controller.launch({
       ...createAuthenticatedRequest(),

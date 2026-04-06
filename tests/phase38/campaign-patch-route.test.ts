@@ -13,15 +13,15 @@ describe('API Router — campaign PATCH route', () => {
     router = createApiRouter({ campaignsModule });
   });
 
-  function createCampaign() {
-    return campaignsModule.campaignService.createCampaign({
+  async function createCampaign() {
+    return await campaignsModule.campaignService.createCampaign({
       title: 'Original Title',
       videoAssetId: 'video-1',
     });
   }
 
   it('PATCH /api/campaigns/:id updates campaign title', async () => {
-    const { campaign } = createCampaign();
+    const { campaign } = await createCampaign();
 
     const res = await router.handle({
       method: 'PATCH',
@@ -36,7 +36,7 @@ describe('API Router — campaign PATCH route', () => {
   });
 
   it('PATCH /api/campaigns/:id updates scheduledAt', async () => {
-    const { campaign } = createCampaign();
+    const { campaign } = await createCampaign();
     const scheduled = '2025-12-25T10:00:00Z';
 
     const res = await router.handle({
@@ -51,7 +51,7 @@ describe('API Router — campaign PATCH route', () => {
   });
 
   it('PATCH /api/campaigns/:id updates both title and scheduledAt', async () => {
-    const { campaign } = createCampaign();
+    const { campaign } = await createCampaign();
 
     const res = await router.handle({
       method: 'PATCH',
@@ -78,15 +78,15 @@ describe('API Router — campaign PATCH route', () => {
   });
 
   it('returns 400 for active campaign', async () => {
-    const { campaign } = createCampaign();
+    const { campaign } = await createCampaign();
     // Add target and launch to make it active
-    campaignsModule.campaignService.addTarget(campaign.id, {
+    await campaignsModule.campaignService.addTarget(campaign.id, {
       channelId: 'ch-1',
       videoTitle: 'V',
       videoDescription: 'D',
     });
-    campaignsModule.campaignService.markReady(campaign.id);
-    campaignsModule.campaignService.launch(campaign.id);
+    await campaignsModule.campaignService.markReady(campaign.id);
+    await campaignsModule.campaignService.launch(campaign.id);
 
     const res = await router.handle({
       method: 'PATCH',
@@ -100,7 +100,7 @@ describe('API Router — campaign PATCH route', () => {
   });
 
   it('returns 401 for unauthenticated request', async () => {
-    const { campaign } = createCampaign();
+    const { campaign } = await createCampaign();
 
     const res = await router.handle({
       method: 'PATCH',
@@ -113,7 +113,7 @@ describe('API Router — campaign PATCH route', () => {
   });
 
   it('preserves original title when only scheduledAt is sent', async () => {
-    const { campaign } = createCampaign();
+    const { campaign } = await createCampaign();
 
     const res = await router.handle({
       method: 'PATCH',
@@ -128,7 +128,7 @@ describe('API Router — campaign PATCH route', () => {
   });
 
   it('preserves original scheduledAt when only title is sent', async () => {
-    const { campaign } = createCampaign();
+    const { campaign } = await createCampaign();
 
     // First set a schedule
     await router.handle({

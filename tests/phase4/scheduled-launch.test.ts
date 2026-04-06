@@ -17,86 +17,86 @@ function createStack(now: Date) {
 }
 
 describe('ScheduledLaunchChecker', () => {
-  test('launches ready campaigns whose scheduledAt has passed', () => {
+  test('launches ready campaigns whose scheduledAt has passed', async () => {
     const now = new Date('2026-04-10T16:00:00Z');
     const { campaignService, checker, jobService } = createStack(now);
 
-    const { campaign } = campaignService.createCampaign({
+    const { campaign } = await campaignService.createCampaign({
       title: 'Scheduled',
       videoAssetId: 'a1',
       scheduledAt: '2026-04-10T15:00:00Z',
     });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    campaignService.markReady(campaign.id);
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await campaignService.markReady(campaign.id);
 
-    const launched = checker.checkAndLaunch();
+    const launched = await checker.checkAndLaunch();
 
     expect(launched).toHaveLength(1);
     expect(launched[0]).toBe(campaign.id);
 
-    const fetched = campaignService.getCampaign(campaign.id);
+    const fetched = await campaignService.getCampaign(campaign.id);
     expect(fetched!.campaign.status).toBe('launching');
   });
 
-  test('does not launch campaigns scheduled in the future', () => {
+  test('does not launch campaigns scheduled in the future', async () => {
     const now = new Date('2026-04-10T14:00:00Z');
     const { campaignService, checker } = createStack(now);
 
-    const { campaign } = campaignService.createCampaign({
+    const { campaign } = await campaignService.createCampaign({
       title: 'Future',
       videoAssetId: 'a1',
       scheduledAt: '2026-04-10T15:00:00Z',
     });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    campaignService.markReady(campaign.id);
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await campaignService.markReady(campaign.id);
 
-    const launched = checker.checkAndLaunch();
+    const launched = await checker.checkAndLaunch();
 
     expect(launched).toHaveLength(0);
-    expect(campaignService.getCampaign(campaign.id)!.campaign.status).toBe('ready');
+    expect((await campaignService.getCampaign(campaign.id))!.campaign.status).toBe('ready');
   });
 
-  test('ignores draft campaigns even if scheduledAt has passed', () => {
+  test('ignores draft campaigns even if scheduledAt has passed', async () => {
     const now = new Date('2026-04-10T16:00:00Z');
     const { campaignService, checker } = createStack(now);
 
-    campaignService.createCampaign({
+    await campaignService.createCampaign({
       title: 'Draft Only',
       videoAssetId: 'a1',
       scheduledAt: '2026-04-10T15:00:00Z',
     });
     // No targets added, campaign remains draft
 
-    const launched = checker.checkAndLaunch();
+    const launched = await checker.checkAndLaunch();
     expect(launched).toHaveLength(0);
   });
 
-  test('ignores campaigns without scheduledAt', () => {
+  test('ignores campaigns without scheduledAt', async () => {
     const now = new Date('2026-04-10T16:00:00Z');
     const { campaignService, checker } = createStack(now);
 
-    const { campaign } = campaignService.createCampaign({ title: 'No Schedule', videoAssetId: 'a1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    campaignService.markReady(campaign.id);
+    const { campaign } = await campaignService.createCampaign({ title: 'No Schedule', videoAssetId: 'a1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await campaignService.markReady(campaign.id);
 
-    const launched = checker.checkAndLaunch();
+    const launched = await checker.checkAndLaunch();
     expect(launched).toHaveLength(0);
   });
 
-  test('does not double-launch already launching campaigns', () => {
+  test('does not double-launch already launching campaigns', async () => {
     const now = new Date('2026-04-10T16:00:00Z');
     const { campaignService, checker } = createStack(now);
 
-    const { campaign } = campaignService.createCampaign({
+    const { campaign } = await campaignService.createCampaign({
       title: 'Already Launched',
       videoAssetId: 'a1',
       scheduledAt: '2026-04-10T15:00:00Z',
     });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    campaignService.markReady(campaign.id);
-    campaignService.launch(campaign.id); // already launching
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await campaignService.markReady(campaign.id);
+    await campaignService.launch(campaign.id); // already launching
 
-    const launched = checker.checkAndLaunch();
+    const launched = await checker.checkAndLaunch();
     expect(launched).toHaveLength(0);
   });
 });

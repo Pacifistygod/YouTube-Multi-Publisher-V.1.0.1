@@ -12,13 +12,13 @@ function setup() {
   return { campaignService, router };
 }
 
-function seedWithTargets(campaignService: ReturnType<typeof setup>['campaignService']) {
-  const { campaign } = campaignService.createCampaign({
+async function seedWithTargets(campaignService: ReturnType<typeof setup>['campaignService']) {
+  const { campaign } = await campaignService.createCampaign({
     title: 'Original Campaign',
     videoAssetId: 'v-orig',
     scheduledAt: '2026-06-01T10:00:00Z',
   });
-  campaignService.addTarget(campaign.id, {
+  await campaignService.addTarget(campaign.id, {
     channelId: 'ch-1',
     videoTitle: 'Video for Channel 1',
     videoDescription: 'Desc 1',
@@ -26,19 +26,19 @@ function seedWithTargets(campaignService: ReturnType<typeof setup>['campaignServ
     privacy: 'public',
     thumbnailAssetId: 'thumb-1',
   });
-  campaignService.addTarget(campaign.id, {
+  await campaignService.addTarget(campaign.id, {
     channelId: 'ch-2',
     videoTitle: 'Video for Channel 2',
     videoDescription: 'Desc 2',
   });
-  return campaignService.getCampaign(campaign.id)!.campaign;
+  return (await campaignService.getCampaign(campaign.id))!.campaign;
 }
 
 describe('Campaign Clone', () => {
   describe('POST /api/campaigns/:id/clone', () => {
     it('clones a campaign as a new draft', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
 
       const request: ApiRequest = {
         method: 'POST',
@@ -55,7 +55,7 @@ describe('Campaign Clone', () => {
 
     it('copies title with "Copy of" prefix', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
 
       const request: ApiRequest = {
         method: 'POST',
@@ -69,7 +69,7 @@ describe('Campaign Clone', () => {
 
     it('copies videoAssetId and scheduledAt', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
 
       const request: ApiRequest = {
         method: 'POST',
@@ -84,7 +84,7 @@ describe('Campaign Clone', () => {
 
     it('clones all targets with new IDs', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
 
       const request: ApiRequest = {
         method: 'POST',
@@ -105,7 +105,7 @@ describe('Campaign Clone', () => {
 
     it('copies target details (channel, title, description, tags, privacy, thumbnail)', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
 
       const request: ApiRequest = {
         method: 'POST',
@@ -130,9 +130,9 @@ describe('Campaign Clone', () => {
 
     it('resets target status to aguardando', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
       // Make the original ready (changes target statuses potentially)
-      campaignService.markReady(original.id);
+      await campaignService.markReady(original.id);
 
       const request: ApiRequest = {
         method: 'POST',
@@ -164,7 +164,7 @@ describe('Campaign Clone', () => {
 
     it('returns 401 without session', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
 
       const request: ApiRequest = {
         method: 'POST',
@@ -178,7 +178,7 @@ describe('Campaign Clone', () => {
 
     it('allows custom title override in body', async () => {
       const { campaignService, router } = setup();
-      const original = seedWithTargets(campaignService);
+      const original = await seedWithTargets(campaignService);
 
       const request: ApiRequest = {
         method: 'POST',

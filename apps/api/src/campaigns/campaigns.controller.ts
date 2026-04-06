@@ -41,7 +41,7 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Missing required field: videoAssetId' } };
     }
 
-    const result = this.campaignService.createCampaign({
+    const result = await this.campaignService.createCampaign({
       title: body.title.trim(),
       videoAssetId: body.videoAssetId,
       scheduledAt: body.scheduledAt,
@@ -62,7 +62,7 @@ export class CampaignsController {
     if (request.query?.limit) filters.limit = parseInt(request.query.limit, 10);
     if (request.query?.offset) filters.offset = parseInt(request.query.offset, 10);
 
-    const result = this.campaignService.listCampaigns(Object.keys(filters).length > 0 ? filters : undefined);
+    const result = await this.campaignService.listCampaigns(Object.keys(filters).length > 0 ? filters : undefined);
     return { status: 200, body: result };
   }
 
@@ -77,7 +77,7 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Missing campaign id' } };
     }
 
-    const result = this.campaignService.getCampaign(id);
+    const result = await this.campaignService.getCampaign(id);
     if (!result) {
       return { status: 404, body: { error: 'Campaign not found' } };
     }
@@ -110,7 +110,7 @@ export class CampaignsController {
     }
 
     try {
-      const result = this.campaignService.addTarget(campaignId, {
+      const result = await this.campaignService.addTarget(campaignId, {
         channelId: body.channelId,
         videoTitle: body.videoTitle,
         videoDescription: body.videoDescription,
@@ -137,8 +137,8 @@ export class CampaignsController {
     }
 
     const result = this.launchService
-      ? this.launchService.launchCampaign(campaignId)
-      : this.campaignService.launch(campaignId);
+      ? await this.launchService.launchCampaign(campaignId)
+      : await this.campaignService.launch(campaignId);
 
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') {
@@ -165,7 +165,7 @@ export class CampaignsController {
       return { status: 501, body: { error: 'Status service not available' } };
     }
 
-    const result = this.statusService.getStatus(campaignId);
+    const result = await this.statusService.getStatus(campaignId);
     if (!result) {
       return { status: 404, body: { error: 'Campaign not found' } };
     }
@@ -185,7 +185,7 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Missing campaign or target id' } };
     }
 
-    const removed = this.campaignService.removeTarget(campaignId, targetId);
+    const removed = await this.campaignService.removeTarget(campaignId, targetId);
     if (!removed) {
       return { status: 404, body: { error: 'Target not found' } };
     }
@@ -219,7 +219,7 @@ export class CampaignsController {
       return { status: 400, body: { error: 'No updatable fields provided' } };
     }
 
-    const result = this.campaignService.updateTarget(campaignId, targetId, body!);
+    const result = await this.campaignService.updateTarget(campaignId, targetId, body!);
     if ('error' in result) {
       return { status: 404, body: { error: 'Target not found' } };
     }
@@ -238,7 +238,7 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Missing campaign id' } };
     }
 
-    const result = this.campaignService.deleteCampaign(campaignId);
+    const result = await this.campaignService.deleteCampaign(campaignId);
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') {
         return { status: 404, body: { error: 'Campaign not found' } };
@@ -261,7 +261,7 @@ export class CampaignsController {
     }
 
     const body = request.body as { title?: string } | undefined;
-    const result = this.campaignService.cloneCampaign(campaignId, body?.title ? { title: body.title } : undefined);
+    const result = await this.campaignService.cloneCampaign(campaignId, body?.title ? { title: body.title } : undefined);
     if ('error' in result) {
       return { status: 404, body: { error: 'Campaign not found' } };
     }
@@ -281,7 +281,7 @@ export class CampaignsController {
     }
 
     const body = request.body as { title?: string; scheduledAt?: string } | undefined;
-    const result = this.campaignService.updateCampaign(campaignId, {
+    const result = await this.campaignService.updateCampaign(campaignId, {
       title: body?.title,
       scheduledAt: body?.scheduledAt,
     });
@@ -313,7 +313,7 @@ export class CampaignsController {
     }
 
     // Verify the target exists in this campaign
-    const campaignResult = this.campaignService.getCampaign(campaignId);
+    const campaignResult = await this.campaignService.getCampaign(campaignId);
     if (!campaignResult) {
       return { status: 404, body: { error: 'Campaign not found' } };
     }
@@ -335,7 +335,7 @@ export class CampaignsController {
     }
 
     // Reset target status back to aguardando
-    this.campaignService.updateTargetStatus(campaignId, targetId, 'aguardando', {
+    await this.campaignService.updateTargetStatus(campaignId, targetId, 'aguardando', {
       errorMessage: null,
     });
 
@@ -353,7 +353,7 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Missing campaign id' } };
     }
 
-    const result = this.campaignService.markReady(campaignId);
+    const result = await this.campaignService.markReady(campaignId);
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') {
         return { status: 404, body: { error: 'Campaign not found' } };
@@ -374,6 +374,6 @@ export class CampaignsController {
       return { status: 501, body: { error: 'Dashboard service not available' } };
     }
 
-    return { status: 200, body: this.dashboardService.getStats() };
+    return { status: 200, body: await this.dashboardService.getStats() };
   }
 }

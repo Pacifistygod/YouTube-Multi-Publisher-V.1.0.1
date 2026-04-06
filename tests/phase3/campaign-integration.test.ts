@@ -35,10 +35,10 @@ describe('controller launch wired to LaunchService', () => {
   test('POST /campaigns/:id/launch enqueues jobs for each target', async () => {
     const { controller, campaignService, jobService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Wired', videoAssetId: 'a1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
-    campaignService.markReady(campaign.id);
+    const { campaign } = await campaignService.createCampaign({ title: 'Wired', videoAssetId: 'a1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-2', videoTitle: 'V2', videoDescription: 'D2' });
+    await campaignService.markReady(campaign.id);
 
     const response = await controller.launch(createAuthenticatedRequest({ params: { id: campaign.id } }));
 
@@ -57,12 +57,12 @@ describe('controller status polling endpoint', () => {
   test('GET /campaigns/:id/status returns live status with shouldPoll', async () => {
     const { controller, campaignService, jobService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Polling', videoAssetId: 'a1' });
-    const { target } = campaignService.addTarget(campaign.id, {
+    const { campaign } = await campaignService.createCampaign({ title: 'Polling', videoAssetId: 'a1' });
+    const { target } = await campaignService.addTarget(campaign.id, {
       channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1',
     });
-    campaignService.markReady(campaign.id);
-    campaignService.launch(campaign.id);
+    await campaignService.markReady(campaign.id);
+    await campaignService.launch(campaign.id);
     jobService.enqueueForTargets([{ id: target.id, campaignId: campaign.id }]);
 
     const response = await controller.getStatus(createAuthenticatedRequest({ params: { id: campaign.id } }));
@@ -86,8 +86,8 @@ describe('controller target removal', () => {
   test('DELETE /campaigns/:id/targets/:targetId removes a target', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Del', videoAssetId: 'a1' });
-    const { target } = campaignService.addTarget(campaign.id, {
+    const { campaign } = await campaignService.createCampaign({ title: 'Del', videoAssetId: 'a1' });
+    const { target } = await campaignService.addTarget(campaign.id, {
       channelId: 'ch-1', videoTitle: 'V1', videoDescription: 'D1',
     });
 
@@ -97,14 +97,14 @@ describe('controller target removal', () => {
 
     expect(response.status).toBe(200);
 
-    const fetched = campaignService.getCampaign(campaign.id);
+    const fetched = await campaignService.getCampaign(campaign.id);
     expect(fetched!.campaign.targets).toHaveLength(0);
   });
 
   test('DELETE /campaigns/:id/targets/:targetId returns 404 for missing target', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Del', videoAssetId: 'a1' });
+    const { campaign } = await campaignService.createCampaign({ title: 'Del', videoAssetId: 'a1' });
 
     const response = await controller.removeTarget(createAuthenticatedRequest({
       params: { id: campaign.id, targetId: 'nonexistent' },
@@ -118,23 +118,23 @@ describe('controller campaign deletion', () => {
   test('DELETE /campaigns/:id removes a draft campaign', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Gone', videoAssetId: 'a1' });
+    const { campaign } = await campaignService.createCampaign({ title: 'Gone', videoAssetId: 'a1' });
 
     const response = await controller.deleteCampaign(createAuthenticatedRequest({
       params: { id: campaign.id },
     }));
 
     expect(response.status).toBe(200);
-    expect(campaignService.getCampaign(campaign.id)).toBeNull();
+    expect(await campaignService.getCampaign(campaign.id)).toBeNull();
   });
 
   test('DELETE /campaigns/:id rejects deleting a launching campaign', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Active', videoAssetId: 'a1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    campaignService.markReady(campaign.id);
-    campaignService.launch(campaign.id);
+    const { campaign } = await campaignService.createCampaign({ title: 'Active', videoAssetId: 'a1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await campaignService.markReady(campaign.id);
+    await campaignService.launch(campaign.id);
 
     const response = await controller.deleteCampaign(createAuthenticatedRequest({
       params: { id: campaign.id },
@@ -148,7 +148,7 @@ describe('controller campaign update', () => {
   test('PATCH /campaigns/:id updates title of a draft campaign', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Old Title', videoAssetId: 'a1' });
+    const { campaign } = await campaignService.createCampaign({ title: 'Old Title', videoAssetId: 'a1' });
 
     const response = await controller.update(createAuthenticatedRequest({
       params: { id: campaign.id },
@@ -162,10 +162,10 @@ describe('controller campaign update', () => {
   test('PATCH /campaigns/:id rejects update on a launching campaign', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({ title: 'Locked', videoAssetId: 'a1' });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    campaignService.markReady(campaign.id);
-    campaignService.launch(campaign.id);
+    const { campaign } = await campaignService.createCampaign({ title: 'Locked', videoAssetId: 'a1' });
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await campaignService.markReady(campaign.id);
+    await campaignService.launch(campaign.id);
 
     const response = await controller.update(createAuthenticatedRequest({
       params: { id: campaign.id },
@@ -195,13 +195,13 @@ describe('campaign scheduling', () => {
   test('scheduled campaign can be launched early via manual launch', async () => {
     const { controller, campaignService } = createFullStack();
 
-    const { campaign } = campaignService.createCampaign({
+    const { campaign } = await campaignService.createCampaign({
       title: 'Scheduled',
       videoAssetId: 'a1',
       scheduledAt: '2026-04-10T15:00:00Z',
     });
-    campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
-    campaignService.markReady(campaign.id);
+    await campaignService.addTarget(campaign.id, { channelId: 'ch-1', videoTitle: 'V', videoDescription: 'D' });
+    await campaignService.markReady(campaign.id);
 
     const response = await controller.launch(createAuthenticatedRequest({
       params: { id: campaign.id },
@@ -211,25 +211,25 @@ describe('campaign scheduling', () => {
     expect(response.body.campaign!.status).toBe('launching');
   });
 
-  test('campaign list shows scheduledAt for scheduled campaigns', () => {
+  test('campaign list shows scheduledAt for scheduled campaigns', async () => {
     const { campaignService } = createFullStack();
 
-    campaignService.createCampaign({
+    await campaignService.createCampaign({
       title: 'Scheduled One',
       videoAssetId: 'a1',
       scheduledAt: '2026-04-10T15:00:00Z',
     });
 
-    const { campaigns } = campaignService.listCampaigns();
+    const { campaigns } = await campaignService.listCampaigns();
     expect(campaigns[0].scheduledAt).toBe('2026-04-10T15:00:00Z');
   });
 
-  test('campaign without scheduledAt has null scheduledAt', () => {
+  test('campaign without scheduledAt has null scheduledAt', async () => {
     const { campaignService } = createFullStack();
 
-    campaignService.createCampaign({ title: 'Immediate', videoAssetId: 'a1' });
+    await campaignService.createCampaign({ title: 'Immediate', videoAssetId: 'a1' });
 
-    const { campaigns } = campaignService.listCampaigns();
+    const { campaigns } = await campaignService.listCampaigns();
     expect(campaigns[0].scheduledAt).toBeNull();
   });
 });

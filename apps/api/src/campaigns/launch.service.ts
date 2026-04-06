@@ -16,8 +16,8 @@ export class LaunchService {
     this.jobService = options.jobService;
   }
 
-  launchCampaign(campaignId: string): { campaign: CampaignRecord } | { error: string } {
-    const result = this.campaignService.launch(campaignId);
+  async launchCampaign(campaignId: string): Promise<{ campaign: CampaignRecord } | { error: string }> {
+    const result = await this.campaignService.launch(campaignId);
 
     if ('error' in result) {
       return result;
