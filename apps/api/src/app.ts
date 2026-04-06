@@ -1,12 +1,13 @@
 import type { AdminSession } from './auth/session.guard';
 import type { AuthModuleInstance } from './auth/auth.module';
 import { createAuthModule } from './auth/auth.module';
-import type { CampaignsModuleInstance } from './campaigns/campaigns.module';
+import type { CampaignsModuleInstance, CampaignsModuleOptions } from './campaigns/campaigns.module';
 import { createCampaignsModule } from './campaigns/campaigns.module';
 import { createApiRouter, type ApiRouter, type ApiResponse } from './router';
 
 export interface AppConfig {
   env?: Record<string, string | undefined>;
+  campaignsModuleOptions?: CampaignsModuleOptions;
 }
 
 export interface HttpRequest {
@@ -31,7 +32,7 @@ export interface AppInstance {
 
 export function createApp(config: AppConfig = {}): AppInstance {
   const authModule = createAuthModule({ env: config.env });
-  const campaignsModule = createCampaignsModule();
+  const campaignsModule = createCampaignsModule(config.campaignsModuleOptions);
   const router = createApiRouter({
     campaignsModule,
     authController: authModule.authController,

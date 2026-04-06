@@ -5,6 +5,7 @@ import { createSecurityMiddleware } from './middleware/security';
 import { createErrorHandler } from './middleware/error-handler';
 import { createRateLimiter } from './middleware/rate-limiter';
 import { createHealthCheck, type HealthCheckInstance } from './health';
+import { createDatabaseProvider, type DatabaseProviderInstance } from './config/database-provider';
 
 export interface BootstrapOptions {
   env: Record<string, string | undefined>;
@@ -15,6 +16,7 @@ export interface BootstrapResult {
   server: ServerInstance;
   sessionStore: SessionStore;
   healthCheck: HealthCheckInstance;
+  databaseProvider: DatabaseProviderInstance;
   handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 }
 
@@ -25,6 +27,8 @@ export function bootstrap(options: BootstrapOptions): BootstrapResult {
   const sessionSecret = env.OAUTH_TOKEN_KEY ?? '';
   const sessionStore = new SessionStore({ secret: sessionSecret });
   const sessionResolver = sessionStore.createSessionResolver();
+
+  const databaseProvider = createDatabaseProvider({ databaseUrl: env.DATABASE_URL });
 
   const server = createServer({ env, sessionResolver });
 
@@ -67,5 +71,5 @@ export function bootstrap(options: BootstrapOptions): BootstrapResult {
     });
   };
 
-  return { server, sessionStore, healthCheck, handler };
+  return { server, sessionStore, healthCheck, databaseProvider, handler };
 }

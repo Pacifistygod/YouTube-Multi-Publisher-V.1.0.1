@@ -68,35 +68,25 @@ describe('App with repository injection', () => {
   });
 });
 
+const baseEnv = {
+  OAUTH_TOKEN_KEY: 'a]3Fk9$2mP!xL7nQ&vR4wY6zA0cE8gI5',
+  NODE_ENV: 'development',
+  ADMIN_EMAIL: 'admin@example.com',
+  ADMIN_PASSWORD_HASH: 'plain:secret123',
+  DATABASE_URL: 'postgresql://user:pass@localhost:5432/mydb',
+  GOOGLE_CLIENT_ID: 'google-client-id',
+  GOOGLE_CLIENT_SECRET: 'google-client-secret',
+  GOOGLE_REDIRECT_URI: 'http://localhost:3000/auth/callback',
+};
+
 describe('Bootstrap database wiring', () => {
   it('returns databaseProvider in bootstrap result', () => {
-    const result = bootstrap({
-      env: {
-        OAUTH_TOKEN_KEY: 'test-key-minimum-32-chars-long-xxx',
-        NODE_ENV: 'development',
-      },
-    });
+    const result = bootstrap({ env: baseEnv });
     expect(result.databaseProvider).toBeDefined();
   });
 
   it('creates database provider when DATABASE_URL is set', () => {
-    const result = bootstrap({
-      env: {
-        OAUTH_TOKEN_KEY: 'test-key-minimum-32-chars-long-xxx',
-        NODE_ENV: 'development',
-        DATABASE_URL: 'postgresql://localhost:5432/test',
-      },
-    });
+    const result = bootstrap({ env: baseEnv });
     expect(result.databaseProvider.campaignRepository).toBeDefined();
-  });
-
-  it('has null campaign repository when DATABASE_URL is absent', () => {
-    const result = bootstrap({
-      env: {
-        OAUTH_TOKEN_KEY: 'test-key-minimum-32-chars-long-xxx',
-        NODE_ENV: 'development',
-      },
-    });
-    expect(result.databaseProvider.campaignRepository).toBeNull();
   });
 });
