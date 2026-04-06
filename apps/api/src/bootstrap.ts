@@ -7,6 +7,7 @@ import { createRateLimiter } from './middleware/rate-limiter';
 import { createHealthCheck, type HealthCheckInstance } from './health';
 import { createDatabaseProvider, type DatabaseProviderInstance } from './config/database-provider';
 import { createAccountRepoAdapter } from './config/account-repo-adapter';
+import { createChannelRepoAdapter } from './config/channel-repo-adapter';
 
 export interface BootstrapOptions {
   env: Record<string, string | undefined>;
@@ -46,8 +47,17 @@ export function bootstrap(options: BootstrapOptions): BootstrapResult {
     : undefined;
 
   // Wire connected account repository through adapter for AccountsService overrides
-  const accountsModuleOptions = databaseProvider.connectedAccountRepository
+  const accountRepoOverrides = databaseProvider.connectedAccountRepository
     ? createAccountRepoAdapter(databaseProvider.connectedAccountRepository)
+    : {};
+
+  const channelStoreOverride = databaseProvider.youtubeChannelRepository
+    ? { channelStore: createChannelRepoAdapter(databaseProvider.youtubeChannelRepository) }
+    : {};
+
+  const hasAccountOptions = databaseProvider.connectedAccountRepository || databaseProvider.youtubeChannelRepository;
+  const accountsModuleOptions = hasAccountOptions
+    ? { ...accountRepoOverrides, ...channelStoreOverride }
     : undefined;
 
   const server = createServer({ env, sessionResolver, campaignsModuleOptions, accountsModuleOptions });

@@ -170,9 +170,10 @@ describe('Bootstrap wires Prisma account repos', () => {
           return accounts.splice(idx, 1)[0];
         }),
       },
-      youtubeChannel: {
+      youTubeChannel: {
         create: vi.fn(async ({ data }: any) => data),
         findUnique: vi.fn(async () => null),
+        findFirst: vi.fn(async () => null),
         findMany: vi.fn(async () => []),
         update: vi.fn(async () => null),
         delete: vi.fn(async () => null),
