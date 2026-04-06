@@ -3,12 +3,12 @@ import http from 'node:http';
 
 const baseEnv: Record<string, string> = {
   NODE_ENV: 'test',
-  PORT: '0', // OS picks a free port
   SESSION_SECRET: 'test-session-secret-32-chars-min!!',
   OAUTH_TOKEN_KEY: '12345678901234567890123456789012',
   GOOGLE_CLIENT_ID: 'test-client-id',
   GOOGLE_CLIENT_SECRET: 'test-client-secret',
   GOOGLE_REDIRECT_URI: 'http://localhost:3000/callback',
+  DATABASE_URL: 'postgresql://localhost/test',
   ADMIN_EMAIL: 'admin@test.com',
   ADMIN_PASSWORD_HASH: '$2b$10$fakehash',
 };
@@ -35,6 +35,7 @@ describe('startServer', () => {
 
     const instance = await startServer({
       env: baseEnv,
+      port: 0,
     });
     cleanup = instance.shutdown;
 
@@ -58,6 +59,7 @@ describe('startServer', () => {
     const instance = await startServer({
       env: { ...baseEnv, DATABASE_URL: 'postgresql://localhost/test' },
       _prismaFactory: () => fakePrisma,
+      port: 0,
     });
     cleanup = instance.shutdown;
 
@@ -74,6 +76,7 @@ describe('startServer', () => {
     const instance = await startServer({
       env: { ...baseEnv, DATABASE_URL: 'postgresql://localhost/test' },
       _prismaFactory: () => fakePrisma,
+      port: 0,
     });
 
     const port = instance.port;
@@ -91,7 +94,7 @@ describe('startServer', () => {
   test('works without DATABASE_URL (in-memory mode)', async () => {
     const { startServer } = await import('../../apps/api/src/start');
 
-    const instance = await startServer({ env: baseEnv });
+    const instance = await startServer({ env: baseEnv, port: 0 });
     cleanup = instance.shutdown;
 
     const port = instance.port;
@@ -102,7 +105,7 @@ describe('startServer', () => {
   test('returns bootstrapResult with databaseProvider', async () => {
     const { startServer } = await import('../../apps/api/src/start');
 
-    const instance = await startServer({ env: baseEnv });
+    const instance = await startServer({ env: baseEnv, port: 0 });
     cleanup = instance.shutdown;
 
     expect(instance.bootstrapResult).toBeDefined();
@@ -113,7 +116,7 @@ describe('startServer', () => {
   test('API routes respond through HTTP — GET /api/dashboard returns 401 without auth', async () => {
     const { startServer } = await import('../../apps/api/src/start');
 
-    const instance = await startServer({ env: baseEnv });
+    const instance = await startServer({ env: baseEnv, port: 0 });
     cleanup = instance.shutdown;
 
     const response = await fetch(`http://127.0.0.1:${instance.port}/api/dashboard`);
