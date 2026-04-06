@@ -320,7 +320,7 @@ export class CampaignService {
   async deleteCampaign(campaignId: string): Promise<{ deleted: boolean } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' }> {
     const campaign = await this.repository.findById(campaignId);
     if (!campaign) return { error: 'NOT_FOUND' };
-    if (campaign.status === 'launching') return { error: 'CAMPAIGN_ACTIVE' };
+    if (campaign.status !== 'draft' && campaign.status !== 'ready') return { error: 'CAMPAIGN_ACTIVE' };
 
     return { deleted: await this.repository.delete(campaignId) };
   }
@@ -331,7 +331,7 @@ export class CampaignService {
   ): Promise<{ campaign: CampaignRecord } | { error: 'NOT_FOUND' | 'CAMPAIGN_ACTIVE' }> {
     const campaign = await this.repository.findById(campaignId);
     if (!campaign) return { error: 'NOT_FOUND' };
-    if (campaign.status === 'launching') return { error: 'CAMPAIGN_ACTIVE' };
+    if (campaign.status !== 'draft' && campaign.status !== 'ready') return { error: 'CAMPAIGN_ACTIVE' };
 
     const patch: Partial<CampaignRecord> = { updatedAt: this.now().toISOString() };
     if (updates.title) patch.title = updates.title;
