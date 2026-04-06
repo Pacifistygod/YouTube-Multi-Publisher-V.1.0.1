@@ -1,6 +1,15 @@
+export type HealthDatabaseMode = 'prisma' | 'in-memory';
+
+export interface HealthDatabaseStatus {
+  configured: boolean;
+  connected: boolean;
+  mode: HealthDatabaseMode;
+}
+
 export interface HealthCheckOptions {
   version?: string;
   nodeEnv?: string;
+  getDatabaseStatus?: () => HealthDatabaseStatus;
 }
 
 export interface HealthCheckResult {
@@ -9,6 +18,7 @@ export interface HealthCheckResult {
   timestamp: number;
   version: string;
   environment: string;
+  database: HealthDatabaseStatus;
 }
 
 export interface HealthCheckInstance {
@@ -19,6 +29,13 @@ export interface HealthCheckInstance {
 export function createHealthCheck(options: HealthCheckOptions): HealthCheckInstance {
   const version = options.version ?? 'unknown';
   const environment = options.nodeEnv ?? 'development';
+  const getDatabaseStatus =
+    options.getDatabaseStatus ??
+    (() => ({
+      configured: false,
+      connected: false,
+      mode: 'in-memory' as const,
+    }));
   const startedAt = Date.now();
 
   function check(): HealthCheckResult {
@@ -28,6 +45,7 @@ export function createHealthCheck(options: HealthCheckOptions): HealthCheckInsta
       timestamp: Date.now(),
       version,
       environment,
+      database: getDatabaseStatus(),
     };
   }
 

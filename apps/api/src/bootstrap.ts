@@ -80,6 +80,11 @@ export function bootstrap(options: BootstrapOptions): BootstrapResult {
   const authRateLimiter = createRateLimiter({ windowMs: 60_000, maxRequests: 10 });
   const healthCheck = createHealthCheck({
     nodeEnv: server.config.nodeEnv,
+    getDatabaseStatus: () => ({
+      configured: Boolean(env.DATABASE_URL),
+      connected: databaseProvider.isConnected(),
+      mode: databaseProvider.campaignRepository ? 'prisma' : 'in-memory',
+    }),
   });
 
   // Compose: error handler → security middleware → (health check | rate limiter → request handler)
