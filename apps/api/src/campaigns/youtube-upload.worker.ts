@@ -24,6 +24,16 @@ export interface YouTubeUploadWorkerOptions {
   getVideoFilePath: (videoAssetId: string) => Promise<string>;
 }
 
+function normalizeUploadErrorMessage(error: unknown): string {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : 'Unknown error';
+
+  return message.trim() ? message.trim() : 'Unknown error';
+}
+
 export class YouTubeUploadWorker {
   private readonly jobService: PublishJobService;
   private readonly campaignService: CampaignService;
@@ -78,7 +88,7 @@ export class YouTubeUploadWorker {
 
       return completedJob;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = normalizeUploadErrorMessage(error);
 
       // Mark job failed
       const failedJob = await this.jobService.markFailed(job.id, errorMessage);
