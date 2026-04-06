@@ -427,6 +427,11 @@ export class CampaignsController {
     }
 
     const body = request.body as { title?: string; scheduledAt?: string } | undefined;
+    const hasUpdates = body && (body.title !== undefined || body.scheduledAt !== undefined);
+    if (!hasUpdates) {
+      return { status: 400, body: { error: 'No updatable fields provided' } };
+    }
+
     if (body?.title !== undefined) {
       if (typeof body.title !== 'string' || !body.title.trim()) {
         return { status: 400, body: { error: 'Invalid title: title must not be blank' } };
