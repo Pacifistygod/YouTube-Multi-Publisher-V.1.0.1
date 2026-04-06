@@ -17,9 +17,21 @@ export interface EnvValidationError {
 
 const VALID_NODE_ENVS = ['development', 'production', 'test'];
 
+function parsePort(rawPort: string | undefined): number {
+  if (rawPort === undefined) {
+    return 3000;
+  }
+
+  const normalized = rawPort.trim();
+  if (!/^\d+$/.test(normalized)) {
+    return Number.NaN;
+  }
+
+  return Number(normalized);
+}
+
 export function loadEnvConfig(env: Record<string, string | undefined>): EnvConfig {
-  const rawPort = env.PORT;
-  const port = rawPort ? parseInt(rawPort, 10) : 3000;
+  const port = parsePort(env.PORT);
 
   return {
     databaseUrl: env.DATABASE_URL,
