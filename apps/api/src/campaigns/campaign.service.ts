@@ -332,7 +332,12 @@ export class CampaignService {
       updatedAt: this.now().toISOString(),
     };
 
-    if (extra?.youtubeVideoId) updates.youtubeVideoId = extra.youtubeVideoId;
+    if (status !== 'publicado') {
+      updates.youtubeVideoId = null;
+    } else if (extra?.youtubeVideoId) {
+      updates.youtubeVideoId = extra.youtubeVideoId;
+    }
+
     if (extra && 'errorMessage' in extra) updates.errorMessage = extra.errorMessage ?? null;
     if (extra?.retryCount !== undefined) updates.retryCount = extra.retryCount;
 

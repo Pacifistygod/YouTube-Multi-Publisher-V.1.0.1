@@ -47,7 +47,7 @@ export function buildCampaignDetailView(data: CampaignDetailData): CampaignDetai
 
     return ({
       ...t,
-      youtubeUrl: t.youtubeVideoId
+      youtubeUrl: t.status === 'publicado' && t.youtubeVideoId
         ? `https://www.youtube.com/watch?v=${t.youtubeVideoId}`
         : undefined,
       retryAvailable:
