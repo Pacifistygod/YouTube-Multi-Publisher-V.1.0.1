@@ -49,6 +49,15 @@ export function createErrorHandler(
         }
       }
 
+      if (res.writableEnded) {
+        return;
+      }
+
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+
       const body: Record<string, unknown> = {
         error: getStatusText(statusCode),
         message,

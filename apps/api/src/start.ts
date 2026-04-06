@@ -32,11 +32,18 @@ export async function startServer(options: StartServerOptions): Promise<StartSer
   await bootstrapResult.databaseProvider.connect();
 
   const httpServer = createHttpServer((req, res) => {
-    bootstrapResult.handler(req, res).catch((err) => {
+    bootstrapResult.handler(req, res).catch(() => {
+      if (res.writableEnded) {
+        return;
+      }
+
       if (!res.headersSent) {
         res.writeHead(500, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal server error' }));
+        return;
       }
-      res.end(JSON.stringify({ error: 'Internal server error' }));
+
+      res.end();
     });
   });
 
