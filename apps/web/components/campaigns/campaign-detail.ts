@@ -38,19 +38,23 @@ export interface CampaignDetailView {
 
 const TERMINAL_STATUSES = new Set(['publicado', 'erro']);
 const POLLING_INTERVAL_MS = 3000;
+const DEFAULT_MAX_RETRIES = 3;
 
 export function buildCampaignDetailView(data: CampaignDetailData): CampaignDetailView {
-  const targets: CampaignDetailTarget[] = data.targets.map((t) => ({
-    ...t,
-    youtubeUrl: t.youtubeVideoId
-      ? `https://www.youtube.com/watch?v=${t.youtubeVideoId}`
-      : undefined,
-    retryAvailable:
-      t.status === 'erro' &&
-      typeof t.retryCount === 'number' &&
-      typeof t.maxRetries === 'number' &&
-      t.retryCount < t.maxRetries,
-  }));
+  const targets: CampaignDetailTarget[] = data.targets.map((t) => {
+    const retryCount = typeof t.retryCount === 'number' ? t.retryCount : 0;
+    const maxRetries = typeof t.maxRetries === 'number' ? t.maxRetries : DEFAULT_MAX_RETRIES;
+
+    return ({
+      ...t,
+      youtubeUrl: t.youtubeVideoId
+        ? `https://www.youtube.com/watch?v=${t.youtubeVideoId}`
+        : undefined,
+      retryAvailable:
+        t.status === 'erro' &&
+        retryCount < maxRetries,
+    });
+  });
 
   const allTerminal = targets.length > 0 && targets.every((t) => TERMINAL_STATUSES.has(t.status));
   const completedCount = targets.filter((t) => t.status === 'publicado').length;
