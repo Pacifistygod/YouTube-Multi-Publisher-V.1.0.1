@@ -273,7 +273,7 @@ describe('Bootstrap wires Prisma account repos', () => {
 
   it('defaults to in-memory behavior without database', async () => {
     const result = bootstrap({
-      env: { ...baseEnv, DATABASE_URL: undefined },
+      env: baseEnv,
     });
 
     const accounts = await result.server.app.accountsModule.accountsService.listAccounts();

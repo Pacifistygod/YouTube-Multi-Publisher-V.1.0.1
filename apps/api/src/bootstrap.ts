@@ -6,6 +6,7 @@ import { createErrorHandler } from './middleware/error-handler';
 import { createRateLimiter } from './middleware/rate-limiter';
 import { createHealthCheck, type HealthCheckInstance } from './health';
 import { createDatabaseProvider, type DatabaseProviderInstance } from './config/database-provider';
+import { createAccountRepoAdapter } from './config/account-repo-adapter';
 
 export interface BootstrapOptions {
   env: Record<string, string | undefined>;
@@ -44,7 +45,12 @@ export function bootstrap(options: BootstrapOptions): BootstrapResult {
       }
     : undefined;
 
-  const server = createServer({ env, sessionResolver, campaignsModuleOptions });
+  // Wire connected account repository through adapter for AccountsService overrides
+  const accountsModuleOptions = databaseProvider.connectedAccountRepository
+    ? createAccountRepoAdapter(databaseProvider.connectedAccountRepository)
+    : undefined;
+
+  const server = createServer({ env, sessionResolver, campaignsModuleOptions, accountsModuleOptions });
 
   // Determine allowed origins
   const allowedOrigins = options.allowedOrigins ??
