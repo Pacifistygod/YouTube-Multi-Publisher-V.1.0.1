@@ -178,9 +178,14 @@ export class CampaignsController {
     const channelId = normalizeNonEmptyString(body?.channelId);
     const videoTitle = normalizeNonEmptyString(body?.videoTitle);
     const videoDescription = normalizeNonEmptyString(body?.videoDescription);
+    const thumbnailAssetId = body?.thumbnailAssetId === undefined ? undefined : normalizeNonEmptyString(body.thumbnailAssetId);
 
     if (!channelId || !videoTitle || !videoDescription) {
       return { status: 400, body: { error: 'Missing required fields: channelId, videoTitle, videoDescription' } };
+    }
+
+    if (body?.thumbnailAssetId !== undefined && !thumbnailAssetId) {
+      return { status: 400, body: { error: 'Invalid thumbnailAssetId: value must not be blank' } };
     }
 
     const privacy = body?.privacy === undefined ? undefined : normalizePrivacyValue(body.privacy);
@@ -200,7 +205,7 @@ export class CampaignsController {
         videoDescription,
         tags: tags ?? undefined,
         privacy,
-        thumbnailAssetId: body?.thumbnailAssetId,
+        thumbnailAssetId,
       });
 
       return { status: 201, body: result };
@@ -305,6 +310,11 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Invalid target update: text fields must not be blank' } };
     }
 
+    const thumbnailAssetId = body?.thumbnailAssetId === undefined ? undefined : normalizeNonEmptyString(body.thumbnailAssetId);
+    if (body?.thumbnailAssetId !== undefined && !thumbnailAssetId) {
+      return { status: 400, body: { error: 'Invalid thumbnailAssetId: value must not be blank' } };
+    }
+
     const privacy = body?.privacy === undefined ? undefined : normalizePrivacyValue(body.privacy);
     if (body?.privacy !== undefined && !privacy) {
       return { status: 400, body: { error: 'Invalid privacy value. Use public, unlisted, or private.' } };
@@ -327,6 +337,7 @@ export class CampaignsController {
       videoDescription: body?.videoDescription !== undefined ? normalizeNonEmptyString(body.videoDescription) : undefined,
       tags: body?.tags !== undefined ? (tags ?? undefined) : undefined,
       privacy,
+      thumbnailAssetId,
     });
     if ('error' in result) {
       return { status: 404, body: { error: 'Target not found' } };
