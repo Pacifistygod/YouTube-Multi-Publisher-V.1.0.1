@@ -21,9 +21,21 @@ export interface HealthCheckResult {
   database: HealthDatabaseStatus;
 }
 
+export interface ReadinessCheckResult {
+  status: 'ready' | 'not_ready';
+  ready: boolean;
+  uptime: number;
+  timestamp: number;
+  version: string;
+  environment: string;
+  database: HealthDatabaseStatus;
+}
+
 export interface HealthCheckInstance {
   check(): HealthCheckResult;
+  ready(): ReadinessCheckResult;
   handleRequest(): { status: number; body: HealthCheckResult };
+  handleReadyRequest(): { status: number; body: ReadinessCheckResult };
 }
 
 export function createHealthCheck(options: HealthCheckOptions): HealthCheckInstance {
@@ -38,9 +50,8 @@ export function createHealthCheck(options: HealthCheckOptions): HealthCheckInsta
     }));
   const startedAt = Date.now();
 
-  function check(): HealthCheckResult {
+  function snapshot() {
     return {
-      status: 'ok',
       uptime: (Date.now() - startedAt) / 1000,
       timestamp: Date.now(),
       version,
@@ -49,9 +60,32 @@ export function createHealthCheck(options: HealthCheckOptions): HealthCheckInsta
     };
   }
 
+  function check(): HealthCheckResult {
+    return {
+      status: 'ok',
+      ...snapshot(),
+    };
+  }
+
+  function ready(): ReadinessCheckResult {
+    const state = snapshot();
+    const isReady = !state.database.configured || state.database.connected;
+
+    return {
+      status: isReady ? 'ready' : 'not_ready',
+      ready: isReady,
+      ...state,
+    };
+  }
+
   function handleRequest(): { status: number; body: HealthCheckResult } {
     return { status: 200, body: check() };
   }
 
-  return { check, handleRequest };
+  function handleReadyRequest(): { status: number; body: ReadinessCheckResult } {
+    const result = ready();
+    return { status: result.ready ? 200 : 503, body: result };
+  }
+
+  return { check, ready, handleRequest, handleReadyRequest };
 }
