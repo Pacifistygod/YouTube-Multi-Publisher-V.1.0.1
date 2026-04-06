@@ -95,11 +95,11 @@ export interface AccountsServiceOptions {
 }
 
 export interface ChannelStore {
-  upsert(record: ChannelRecord): ChannelRecord;
-  findByAccountId(accountId: string): ChannelRecord[];
-  findById(channelId: string): ChannelRecord | null;
-  update(channelId: string, updates: Partial<ChannelRecord>): ChannelRecord | null;
-  deactivateAllForAccount(accountId: string): void;
+  upsert(record: ChannelRecord): Promise<ChannelRecord>;
+  findByAccountId(accountId: string): Promise<ChannelRecord[]>;
+  findById(channelId: string): Promise<ChannelRecord | null>;
+  update(channelId: string, updates: Partial<ChannelRecord>): Promise<ChannelRecord | null>;
+  deactivateAllForAccount(accountId: string): Promise<void>;
 }
 
 export class AccountsService {
@@ -286,7 +286,7 @@ export class AccountsService {
     const result = await fetchChannels(tokens.accessToken);
     const nowIso = this.now().toISOString();
 
-    const channels: ChannelRecord[] = result.channels.map((ch) => {
+    const channels: ChannelRecord[] = await Promise.all(result.channels.map((ch) => {
       const record: ChannelRecord = {
         id: randomUUID(),
         connectedAccountId: account.id,
@@ -298,16 +298,16 @@ export class AccountsService {
         lastSyncedAt: nowIso,
       };
       return this.channelStore.upsert(record);
-    });
+    }));
 
     return channels;
   }
 
-  toggleChannel(channelId: string, isActive: boolean): ChannelRecord | null {
+  async toggleChannel(channelId: string, isActive: boolean): Promise<ChannelRecord | null> {
     return this.channelStore.update(channelId, { isActive });
   }
 
-  getChannelsForAccount(accountId: string): ChannelRecord[] {
+  async getChannelsForAccount(accountId: string): Promise<ChannelRecord[]> {
     if (this.options.getChannelsForAccount) {
       // Sync path — allow async override but we return the cached store version
     }
@@ -329,6 +329,7 @@ export class AccountsService {
   }
 
   disconnectAccount(accountId: string): { disconnected: boolean; account?: ConnectedAccountRecord } {
+    // Fire-and-forget — start async deactivation without awaiting
     this.channelStore.deactivateAllForAccount(accountId);
 
     const updateFn = this.options.updateConnectedAccount;
@@ -346,7 +347,7 @@ export class AccountsService {
   }
 
   async disconnectAccountAsync(accountId: string): Promise<{ disconnected: boolean; account?: ConnectedAccountRecord }> {
-    this.channelStore.deactivateAllForAccount(accountId);
+    await this.channelStore.deactivateAllForAccount(accountId);
 
     const nowIso = this.now().toISOString();
     const updates: Partial<ConnectedAccountRecord> = {
@@ -404,7 +405,7 @@ export type { GoogleTokenResult };
 class InMemoryChannelStore implements ChannelStore {
   private readonly records = new Map<string, ChannelRecord>();
 
-  upsert(record: ChannelRecord): ChannelRecord {
+  async upsert(record: ChannelRecord): Promise<ChannelRecord> {
     const key = `${record.connectedAccountId}:${record.youtubeChannelId}`;
     const existing = this.records.get(key);
 
@@ -424,15 +425,15 @@ class InMemoryChannelStore implements ChannelStore {
     return updated;
   }
 
-  findByAccountId(accountId: string): ChannelRecord[] {
+  async findByAccountId(accountId: string): Promise<ChannelRecord[]> {
     return Array.from(this.records.values()).filter((r) => r.connectedAccountId === accountId);
   }
 
-  findById(channelId: string): ChannelRecord | null {
+  async findById(channelId: string): Promise<ChannelRecord | null> {
     return Array.from(this.records.values()).find((r) => r.id === channelId) ?? null;
   }
 
-  update(channelId: string, updates: Partial<ChannelRecord>): ChannelRecord | null {
+  async update(channelId: string, updates: Partial<ChannelRecord>): Promise<ChannelRecord | null> {
     for (const [key, record] of this.records) {
       if (record.id === channelId) {
         const updated = { ...record, ...updates };
@@ -443,7 +444,7 @@ class InMemoryChannelStore implements ChannelStore {
     return null;
   }
 
-  deactivateAllForAccount(accountId: string): void {
+  async deactivateAllForAccount(accountId: string): Promise<void> {
     for (const [key, record] of this.records) {
       if (record.connectedAccountId === accountId) {
         this.records.set(key, { ...record, isActive: false });

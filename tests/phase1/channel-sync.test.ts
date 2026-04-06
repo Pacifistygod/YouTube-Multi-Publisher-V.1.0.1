@@ -103,7 +103,7 @@ describe('channel toggle activation', () => {
     });
 
     const channels = await service.syncChannelsForAccount(account);
-    const toggled = service.toggleChannel(channels[0].id, false);
+    const toggled = await service.toggleChannel(channels[0].id, false);
 
     expect(toggled).not.toBeNull();
     expect(toggled!.isActive).toBe(false);
@@ -119,21 +119,21 @@ describe('channel toggle activation', () => {
     });
 
     const channels = await service.syncChannelsForAccount(account);
-    service.toggleChannel(channels[0].id, false);
-    const toggled = service.toggleChannel(channels[0].id, true);
+    await service.toggleChannel(channels[0].id, false);
+    const toggled = await service.toggleChannel(channels[0].id, true);
 
     expect(toggled).not.toBeNull();
     expect(toggled!.isActive).toBe(true);
   });
 
-  test('PATCH returns null for unknown channel', () => {
+  test('PATCH returns null for unknown channel', async () => {
     const crypto = createTokenCrypto();
 
     const service = new AccountsService({
       tokenCryptoService: crypto,
     });
 
-    const result = service.toggleChannel('nonexistent-id', true);
+    const result = await service.toggleChannel('nonexistent-id', true);
     expect(result).toBeNull();
   });
 
@@ -168,7 +168,7 @@ describe('account disconnect', () => {
 
     expect(result.disconnected).toBe(true);
 
-    const channels = service.getChannelsForAccount(account.id);
+    const channels = await service.getChannelsForAccount(account.id);
     expect(channels.every((ch) => ch.isActive === false)).toBe(true);
   });
 

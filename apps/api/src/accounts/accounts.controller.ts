@@ -143,7 +143,7 @@ export class AccountsController {
       return { status: 400, body: { error: 'Missing accountId parameter.' } };
     }
 
-    const channels = this.accountsService.getChannelsForAccount(accountId);
+    const channels = await this.accountsService.getChannelsForAccount(accountId);
     return { status: 200, body: { channels } };
   }
 
@@ -165,7 +165,7 @@ export class AccountsController {
       return { status: 400, body: { error: 'Invalid request body. Expected { isActive: boolean }.' } };
     }
 
-    const channel = this.accountsService.toggleChannel(channelId, request.body.isActive);
+    const channel = await this.accountsService.toggleChannel(channelId, request.body.isActive);
 
     if (!channel) {
       return { status: 404, body: { error: 'Channel not found.' } };
