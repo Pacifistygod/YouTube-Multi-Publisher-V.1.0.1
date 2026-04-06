@@ -42,14 +42,26 @@ export async function startServer(options: StartServerOptions): Promise<StartSer
 
   const requestedPort = options.port ?? parseInt(options.env.PORT ?? '3000', 10);
 
-  const port = await new Promise<number>((resolve, reject) => {
-    httpServer.on('error', reject);
-    httpServer.listen(requestedPort, () => {
-      const addr = httpServer.address();
-      const actualPort = typeof addr === 'object' && addr ? addr.port : requestedPort;
-      resolve(actualPort);
+  let port: number;
+  try {
+    port = await new Promise<number>((resolve, reject) => {
+      const handleListenError = (error: Error) => {
+        httpServer.removeListener('error', handleListenError);
+        reject(error);
+      };
+
+      httpServer.on('error', handleListenError);
+      httpServer.listen(requestedPort, () => {
+        httpServer.removeListener('error', handleListenError);
+        const addr = httpServer.address();
+        const actualPort = typeof addr === 'object' && addr ? addr.port : requestedPort;
+        resolve(actualPort);
+      });
     });
-  });
+  } catch (error) {
+    await bootstrapResult.databaseProvider.disconnect();
+    throw error;
+  }
 
   const gracefulShutdown = createGracefulShutdown({ timeoutMs: 10_000 });
 
