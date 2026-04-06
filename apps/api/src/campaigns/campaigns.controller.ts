@@ -52,6 +52,30 @@ function normalizePrivacyValue(rawValue: unknown): string | undefined {
   return VALID_TARGET_PRIVACY_VALUES.has(normalized) ? normalized : undefined;
 }
 
+function normalizeTags(rawValue: unknown): string[] | undefined | null {
+  if (rawValue === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(rawValue)) {
+    return null;
+  }
+
+  const normalizedTags: string[] = [];
+  for (const entry of rawValue) {
+    if (typeof entry !== 'string') {
+      return null;
+    }
+
+    const normalized = entry.trim();
+    if (normalized) {
+      normalizedTags.push(normalized);
+    }
+  }
+
+  return normalizedTags;
+}
+
 export class CampaignsController {
   constructor(
     private readonly campaignService: CampaignService,
@@ -164,12 +188,17 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Invalid privacy value. Use public, unlisted, or private.' } };
     }
 
+    const tags = normalizeTags(body?.tags);
+    if (body?.tags !== undefined && tags === null) {
+      return { status: 400, body: { error: 'Invalid tags payload. Use an array of strings.' } };
+    }
+
     try {
       const result = await this.campaignService.addTarget(campaignId, {
         channelId,
         videoTitle,
         videoDescription,
-        tags: body?.tags,
+        tags: tags ?? undefined,
         privacy,
         thumbnailAssetId: body?.thumbnailAssetId,
       });
@@ -281,6 +310,11 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Invalid privacy value. Use public, unlisted, or private.' } };
     }
 
+    const tags = normalizeTags(body?.tags);
+    if (body?.tags !== undefined && tags === null) {
+      return { status: 400, body: { error: 'Invalid tags payload. Use an array of strings.' } };
+    }
+
     const hasUpdates = body && (body.videoTitle !== undefined || body.videoDescription !== undefined ||
       body.tags !== undefined || body.privacy !== undefined || body.thumbnailAssetId !== undefined);
     if (!hasUpdates) {
@@ -291,6 +325,7 @@ export class CampaignsController {
       ...body,
       videoTitle: body?.videoTitle !== undefined ? normalizeNonEmptyString(body.videoTitle) : undefined,
       videoDescription: body?.videoDescription !== undefined ? normalizeNonEmptyString(body.videoDescription) : undefined,
+      tags: body?.tags !== undefined ? (tags ?? undefined) : undefined,
       privacy,
     });
     if ('error' in result) {
