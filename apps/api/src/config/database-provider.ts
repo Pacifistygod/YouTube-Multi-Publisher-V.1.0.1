@@ -142,19 +142,19 @@ export function createDatabaseProvider(options: DatabaseProviderOptions): Databa
 
     async disconnect() {
       if (!prismaClient) return;
-
-      if (connectPromise && !connected) {
-        try {
-          await connectPromise;
-        } catch {
-          return;
-        }
-      }
-
-      if (!connected) return;
       if (disconnectPromise) return disconnectPromise;
 
       disconnectPromise = (async () => {
+        if (connectPromise && !connected) {
+          try {
+            await connectPromise;
+          } catch {
+            return;
+          }
+        }
+
+        if (!connected) return;
+
         await prismaClient.$disconnect();
         connected = false;
       })();
