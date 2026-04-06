@@ -33,7 +33,7 @@ function authRequest(overrides: Partial<{ params: Record<string, string>; body: 
 }
 
 describe('campaign retry target status hardening', () => {
-  test('retryTarget rejects a target that is no longer failed even if a failed job still exists', async () => {
+  test('retryTarget rejects a target already back in progress even if a failed job still exists', async () => {
     const { controller, campaignService, jobService } = createFullStack();
 
     const { campaign } = await campaignService.createCampaign({ title: 'Retry Guard', videoAssetId: 'asset-1' });
@@ -48,14 +48,14 @@ describe('campaign retry target status hardening', () => {
     const [job] = await jobService.enqueueForTargets([{ id: target.id, campaignId: campaign.id }]);
     await jobService.pickNext();
     await jobService.markFailed(job.id, 'quotaExceeded');
-    await campaignService.updateTargetStatus(campaign.id, target.id, 'aguardando', { errorMessage: null });
+    await campaignService.updateTargetStatus(campaign.id, target.id, 'enviando', { errorMessage: null });
 
     const response = await controller.retryTarget(authRequest({
       params: { id: campaign.id, targetId: target.id },
     }));
 
     expect(response.status).toBe(400);
-    expect(response.body).toMatchObject({ error: expect.stringContaining('failed') });
+    expect(response.body).toMatchObject({ error: expect.stringContaining('retry') });
 
     const [persistedJob] = await jobService.getJobsForTarget(target.id);
     expect(persistedJob.attempt).toBe(1);

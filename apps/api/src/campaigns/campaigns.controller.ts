@@ -515,6 +515,10 @@ export class CampaignsController {
       return { status: 404, body: { error: 'Target not found' } };
     }
 
+    if (target.status === 'enviando' || target.status === 'publicado') {
+      return { status: 400, body: { error: 'Cannot retry a target that is already in progress or published' } };
+    }
+
     // Find the latest failed job for this target
     const jobs = await this.jobService.getJobsForTarget(targetId);
     const failedJob = [...jobs].reverse().find((j) => j.status === 'failed');
