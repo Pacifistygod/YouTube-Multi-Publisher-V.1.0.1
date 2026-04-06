@@ -189,8 +189,19 @@ export class CampaignService {
     return { target };
   }
 
-  listCampaigns(): { campaigns: CampaignRecord[] } {
-    return { campaigns: this.repository.findAllNewestFirst() };
+  listCampaigns(filters?: { status?: string; search?: string }): { campaigns: CampaignRecord[] } {
+    let campaigns = this.repository.findAllNewestFirst();
+
+    if (filters?.status) {
+      campaigns = campaigns.filter((c) => c.status === filters.status);
+    }
+
+    if (filters?.search) {
+      const term = filters.search.toLowerCase();
+      campaigns = campaigns.filter((c) => c.title.toLowerCase().includes(term));
+    }
+
+    return { campaigns };
   }
 
   getCampaign(id: string): { campaign: CampaignRecord } | null {

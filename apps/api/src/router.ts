@@ -11,6 +11,7 @@ export interface ApiRequest {
   path: string;
   session: AdminSession | null;
   body?: unknown;
+  query?: Record<string, string>;
 }
 
 export interface ApiResponse {
@@ -268,6 +269,7 @@ export function createApiRouter(options: {
           session: request.session,
           body: request.body,
           params,
+          query: request.query,
         };
 
         const result = await route.handler(controllerRequest);

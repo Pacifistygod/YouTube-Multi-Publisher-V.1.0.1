@@ -50,13 +50,17 @@ export class CampaignsController {
     return { status: 201, body: result };
   }
 
-  async list(request: SessionRequestLike): Promise<ControllerResponse<{ campaigns: CampaignRecord[]; error?: string }>> {
+  async list(request: SessionRequestLike & { query?: Record<string, string> }): Promise<ControllerResponse<{ campaigns: CampaignRecord[]; error?: string }>> {
     const guardResult = this.sessionGuard.check(request);
     if (!guardResult.allowed) {
       return { status: guardResult.status, body: { campaigns: [], error: guardResult.reason } };
     }
 
-    const result = this.campaignService.listCampaigns();
+    const filters: { status?: string; search?: string } = {};
+    if (request.query?.status) filters.status = request.query.status;
+    if (request.query?.search) filters.search = request.query.search;
+
+    const result = this.campaignService.listCampaigns(Object.keys(filters).length > 0 ? filters : undefined);
     return { status: 200, body: result };
   }
 
