@@ -76,6 +76,23 @@ function normalizeTags(rawValue: unknown): string[] | undefined | null {
   return normalizedTags;
 }
 
+function normalizeScheduledAt(rawValue: unknown): string | undefined | null {
+  if (rawValue === undefined) {
+    return undefined;
+  }
+
+  if (typeof rawValue !== 'string') {
+    return null;
+  }
+
+  const normalized = rawValue.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return Number.isNaN(Date.parse(normalized)) ? null : normalized;
+}
+
 export class CampaignsController {
   constructor(
     private readonly campaignService: CampaignService,
@@ -103,10 +120,15 @@ export class CampaignsController {
       return { status: 400, body: { error: 'Missing required field: videoAssetId' } };
     }
 
+    const scheduledAt = normalizeScheduledAt(body?.scheduledAt);
+    if (body?.scheduledAt !== undefined && !scheduledAt) {
+      return { status: 400, body: { error: 'Invalid scheduledAt: use a valid date-time string' } };
+    }
+
     const result = await this.campaignService.createCampaign({
       title,
       videoAssetId,
-      scheduledAt: body?.scheduledAt,
+      scheduledAt: scheduledAt ?? undefined,
     });
 
     return { status: 201, body: result };
@@ -411,9 +433,14 @@ export class CampaignsController {
       }
     }
 
+    const scheduledAt = normalizeScheduledAt(body?.scheduledAt);
+    if (body?.scheduledAt !== undefined && !scheduledAt) {
+      return { status: 400, body: { error: 'Invalid scheduledAt: use a valid date-time string' } };
+    }
+
     const result = await this.campaignService.updateCampaign(campaignId, {
       title: body?.title?.trim(),
-      scheduledAt: body?.scheduledAt,
+      scheduledAt: scheduledAt ?? undefined,
     });
 
     if ('error' in result) {
