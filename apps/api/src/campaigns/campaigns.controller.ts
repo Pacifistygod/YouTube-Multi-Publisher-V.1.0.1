@@ -252,13 +252,25 @@ export class CampaignsController {
       thumbnailAssetId?: string;
     } | undefined;
 
+    if (body?.videoTitle !== undefined && !normalizeNonEmptyString(body.videoTitle)) {
+      return { status: 400, body: { error: 'Invalid target update: text fields must not be blank' } };
+    }
+
+    if (body?.videoDescription !== undefined && !normalizeNonEmptyString(body.videoDescription)) {
+      return { status: 400, body: { error: 'Invalid target update: text fields must not be blank' } };
+    }
+
     const hasUpdates = body && (body.videoTitle !== undefined || body.videoDescription !== undefined ||
       body.tags !== undefined || body.privacy !== undefined || body.thumbnailAssetId !== undefined);
     if (!hasUpdates) {
       return { status: 400, body: { error: 'No updatable fields provided' } };
     }
 
-    const result = await this.campaignService.updateTarget(campaignId, targetId, body!);
+    const result = await this.campaignService.updateTarget(campaignId, targetId, {
+      ...body,
+      videoTitle: body?.videoTitle !== undefined ? normalizeNonEmptyString(body.videoTitle) : undefined,
+      videoDescription: body?.videoDescription !== undefined ? normalizeNonEmptyString(body.videoDescription) : undefined,
+    });
     if ('error' in result) {
       return { status: 404, body: { error: 'Target not found' } };
     }
